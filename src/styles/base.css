@@ -1,0 +1,14 @@
+/* Tailwind preflight가 기본 초기화를 담당하므로 프로젝트에 필요한 차이만 둡니다. */
+@layer base {
+  html {
+    min-width: 320px;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100svh;
+  }
+}
