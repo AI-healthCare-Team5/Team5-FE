@@ -1,16 +1,18 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router";
+import { DesignIcon } from "@/components/DesignIcon";
 
-type Variant = "primary" | "outline" | "quiet" | "emergency";
+type Variant = "primary" | "outline" | "quiet" | "emergency" | "neutral";
 const variants: Record<Variant, string> = {
   primary: "border-brand bg-brand text-white hover:bg-brand-strong",
-  outline: "border-control bg-surface text-brand-strong hover:bg-brand-soft",
+  outline: "border-brand bg-surface text-brand-strong hover:bg-brand-soft",
   quiet: "border-transparent text-brand-strong underline underline-offset-4",
   emergency: "border-emergency bg-emergency text-white hover:brightness-90",
+  neutral: "border-control bg-surface text-notice-ink hover:bg-notice",
 };
 
 function buttonClass(variant: Variant = "primary") {
-  return `flex min-h-[max(44px,3.222rem)] w-full items-center justify-center gap-2 rounded-[12px] border px-4 py-3 text-center font-semibold transition-colors disabled:cursor-not-allowed disabled:border-line disabled:bg-line disabled:text-muted ${variants[variant]}`;
+  return `flex ${variant === "primary" ? "min-h-[max(44px,3.4rem)]" : "min-h-[max(44px,3.2rem)]"} w-full items-center justify-center gap-[10px] rounded-[18px] border-2 px-5 py-3 text-center font-bold transition-colors disabled:cursor-not-allowed disabled:border-line disabled:bg-line disabled:text-muted ${variants[variant]}`;
 }
 
 export function Button({
@@ -52,7 +54,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-[16px] border border-line bg-surface p-4 ${className}`}
+      className={`rounded-[20px] border border-line bg-surface p-5 ${className}`}
     >
       {children}
     </div>
@@ -67,13 +69,13 @@ export function Notice({
   tone?: "neutral" | "amber" | "emergency";
 }) {
   const colors = {
-    neutral: "border-line bg-brand-soft text-muted",
+    neutral: "border-notice bg-notice text-notice-ink",
     amber: "border-amber-line bg-amber-soft text-amber-ink",
-    emergency: "border-[#fecdca] bg-emergency-soft text-[#912018]",
+    emergency: "border-emergency-line bg-emergency-soft text-emergency-ink",
   };
   return (
     <div
-      className={`rounded-[12px] border p-4 text-[0.889rem] ${colors[tone]}`}
+      className={`rounded-[14px] border px-4 py-[14px] text-[0.889rem] ${colors[tone]}`}
     >
       {children}
     </div>
@@ -92,9 +94,9 @@ export function PageTitle({
   return (
     <div className="space-y-3">
       {eyebrow && (
-        <p className="text-[0.833rem] font-bold text-brand-strong">{eyebrow}</p>
+        <p className="text-[0.889rem] font-bold text-brand-strong">{eyebrow}</p>
       )}
-      <h1 className="text-[1.667rem] leading-[1.4] font-bold tracking-tight">
+      <h1 className="text-[1.667rem] leading-[1.35] font-bold tracking-[-0.02em]">
         {children}
       </h1>
       {description && <p className="text-muted">{description}</p>}
@@ -105,16 +107,16 @@ export function PageTitle({
 export function Progress({
   current,
   total,
+  label,
 }: {
   current: number;
   total: number;
+  label: string;
 }) {
   return (
     <div className="space-y-2" aria-label={`질문 ${current} / ${total}`}>
-      <div className="flex justify-between gap-2 text-[0.833rem]">
-        <span className="font-bold text-brand-strong">
-          차근차근 알려 주세요
-        </span>
+      <div className="flex justify-between gap-2 text-[0.889rem]">
+        <span className="font-bold text-brand-strong">{label}</span>
         <span className="text-muted">
           질문 {current} / {total}
         </span>
@@ -152,7 +154,7 @@ export function Chip({
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`min-h-[max(44px,3rem)] rounded-[12px] border px-3 py-2 font-medium ${selected ? "border-brand bg-brand text-white" : "border-control bg-surface hover:bg-brand-soft"}`}
+      className={`min-h-[max(44px,3.2rem)] rounded-[16px] border-2 border-brand px-3 py-2 font-bold ${selected ? "bg-brand text-white" : "bg-surface text-brand-strong hover:bg-brand-soft"}`}
     >
       {children}
     </button>
@@ -165,6 +167,9 @@ export function Disclaimer({
   children?: ReactNode;
 }) {
   return (
-    <p className="text-[0.833rem] leading-relaxed text-muted">ⓘ {children}</p>
+    <p className="flex items-start gap-[10px] text-[0.889rem] leading-[1.5] text-muted">
+      <DesignIcon name="info" size={20} />
+      <span>{children}</span>
+    </p>
   );
 }

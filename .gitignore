@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Local-only planning documents
+/docs/
+
 # Build output
 dist/
 

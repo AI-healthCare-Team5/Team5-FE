@@ -9,7 +9,9 @@ export function MyInfoPage() {
   const navigate = useNavigate();
   return (
     <>
-      <PageTitle>내 정보</PageTitle>
+      <PageTitle description="계정과 저장된 기록을 관리할 수 있어요.">
+        내 정보
+      </PageTitle>
       <AccountCard
         loggedIn={state.loggedIn}
         nickname={state.nickname}
