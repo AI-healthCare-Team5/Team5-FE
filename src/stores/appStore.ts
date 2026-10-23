@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { createSampleRecords } from "@/stores/fixtures";
 import {
   createSummary,
   type Interview,
@@ -53,7 +54,10 @@ export const appActions = {
     update({ returnTo });
   },
   loginDemo() {
-    update({ loggedIn: true });
+    update({
+      loggedIn: true,
+      records: state.loggedIn ? state.records : createSampleRecords(),
+    });
   },
   agreeToRecords() {
     if (!state.loggedIn) {
