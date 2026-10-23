@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { MicGuidePage } from "@/pages/mic-guide/MicGuidePage";
 import { InterviewPage } from "@/pages/interview/InterviewPage";
 import { LocationPage } from "@/pages/location/LocationPage";
+import { HospitalEmptyPage } from "@/pages/hospital-empty/HospitalEmptyPage";
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { path: "/mic-guide/unavailable", element: <MicGuidePage unavailable /> },
       { path: "/interview", element: <InterviewPage /> },
       { path: "/location", element: <LocationPage /> },
+      { path: "/hospital-empty", element: <HospitalEmptyPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
