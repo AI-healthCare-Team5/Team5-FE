@@ -43,6 +43,6 @@ export function createSummary(interview: Interview): SummaryData {
     medicine: interview.medicine ?? unknown,
     conditions: interview.conditions ?? unknown,
     allergy: interview.allergy ?? unknown,
-    department: "정형외과",
+    department: "아직 안내되지 않았어요",
   };
 }
