@@ -10,6 +10,7 @@ import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
 import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
+import { LoginPage } from "@/pages/login/LoginPage";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,8 @@ const router = createBrowserRouter([
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
       { path: "/emergency", element: <EmergencyPage /> },
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "/login/failed", element: <LoginPage failed /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
