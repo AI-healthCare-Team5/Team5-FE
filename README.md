@@ -1,5 +1,62 @@
 # 진료한장
 
+## M1 화면 구현 상태
+
+현재는 API 없이 화면을 확인하는 단계입니다. 카카오 로그인 버튼은 예시 로그인 상태로 전환하며 실제 인증·마이크·위치 권한·지도 SDK·병원 API를 호출하지 않습니다. 진료과와 병원 지도는 가짜 데이터와 예시 표시입니다. 문진·로그인·기록 데이터는 메모리에만 유지되며 새로고침하면 초기화됩니다. 글자 크기만 로컬 저장소에 저장합니다.
+
+- 시작: `/`, 마이크 안내: `/mic-guide`, 사용 불가: `/mic-guide/unavailable`
+- 7문항 문진: `/interview`, 위치 안내: `/location`
+- 병원 없음: `/hospital-empty`, 병원 오류: `/hospital-error`
+- 요약지 로딩: `/summary-loading`, 응급 안내: `/emergency`
+- 보호자 동의: `/guardian-consent?from=guardian` 또는 `?from=my-info`
+- 로그인: `/login`, 실패: `/login/failed`, 기록 동의: `/record-consent`
+- 내 기록: `/records`, 기록 상세: `/records/:id`, 내 계정: `/my-info`
+
+실패·빈 결과·응급 화면은 해당 URL로 직접 검토합니다. 로그인 후 동의하면 예시 기록 3건을 볼 수 있습니다. 문진은 버튼 선택 후 다음 질문으로 이동하며 이전 답변을 유지합니다. 마지막 기록을 지우면 기록 저장 동의도 해제합니다.
+
+### 다른 담당자와 연결할 부분
+
+`/text-input`(#22), `/region`(#33), `/hospitals`(#24), `/summary`(#25), `/emergency-card`(#30), `/guardian`(#31)는 담당 화면이 합쳐질 때 `src/App.tsx`에 추가해야 합니다. 현재 해당 경로는 404로 처리하며 M1 작업에서 임의 화면을 만들지 않았습니다. `/my-info`는 계정 영역만 구현되어 있으므로 #32 본문을 추가해야 합니다. 따라서 전체 문진→병원→요약지 통합 흐름은 아직 완성되지 않았습니다.
+
+- `HospitalMap`: `hospitals: MapHospital[]`, `selectedHospitalId`, `onSelectHospital(id)`로 목록과 선택을 공유합니다. 좌표는 `latitude`, `longitude`이며 SDK 교체 전 예시 지도입니다.
+- `SummaryDocument`: `summary: SummaryData`를 받아 9개 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
+- `SummaryStorage`: `loggedIn`, `saved`, `onLogin`, `onSave`를 전달합니다. 저장이 확인된 경우에만 `saved=true`를 전달합니다. 로그인 전 `appActions.prepareLogin("/summary")`를 호출하면 동의 후 복귀합니다.
+- `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `onLogout`, `onWithdraw`를 전달합니다.
+- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`와 `SummaryData`는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다.
+
+### 공통 UI 사용 예시
+
+```tsx
+import {
+  ActionLink,
+  Button,
+  Card,
+  Chip,
+  Notice,
+  Progress,
+} from "@/components/ui";
+
+<Card>
+  <Notice tone="amber">정책 확정 전 안내</Notice>
+  <Progress current={1} total={7} />
+  <Chip selected={selected} onClick={() => setSelected(!selected)}>
+    선택지
+  </Chip>
+  <Button disabled={!selected} onClick={handleNext}>
+    다음
+  </Button>
+  <ActionLink to="/" variant="outline">
+    처음으로
+  </ActionLink>
+</Card>;
+```
+
+레이아웃은 `AppShell`이 제공하므로 페이지 안에서 `main`을 중복 작성하지 않습니다. 고정 119 바를 숨겨야 하는 경로는 `AppShell`의 집합에 등록합니다. 공통 버튼은 `primary`, `outline`, `quiet`, `emergency` 변형을 지원합니다. 글자·여백은 rem, 아이콘·터치 영역 최소값·119 바는 px로 관리합니다.
+
+카카오 버튼 출처: [공식 리소스](https://developers.kakao.com/tool/resource/login). PWA 아이콘은 저장소의 SVG 원본에서 PNG로 내보낸 파일이며 manifest에는 192/512 및 maskable 변형을 등록했습니다. 서비스 워커와 오프라인 캐시는 추가하지 않았습니다. iOS 홈 화면 설치·실기기 검증은 별도로 필요합니다.
+
+이슈별 브랜치는 선행 브랜치를 기반으로 순서대로 쌓여 있습니다. PR의 base는 바로 앞 선행 브랜치로 지정하여 변경을 분리합니다. 병합은 공통 기반부터 진행하고, 선행 PR 병합 후 다음 PR base를 main으로 변경합니다. 부분 구현과 연동 보류 이슈는 `Refs`로 연결하며 자동 종료하지 않습니다. `docs/`는 로컬 참고 자료이므로 커밋·push하지 않습니다.
+
 Vite, React, TypeScript, Tailwind CSS를 사용하는 프론트엔드 프로젝트입니다.
 
 ## 개발 환경

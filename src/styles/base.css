@@ -28,4 +28,8 @@
     outline: 3px solid var(--color-brand);
     outline-offset: 3px;
   }
+
+  main h1[tabindex="-1"]:focus {
+    outline: none;
+  }
 }
