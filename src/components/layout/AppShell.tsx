@@ -40,7 +40,7 @@ export function AppShell() {
     }
   }, [pathname]);
   return (
-    <div className="md:border-line mx-auto flex min-h-dvh w-full flex-col bg-canvas md:max-w-[480px] md:border-x md:shadow-xl">
+    <div className="mx-auto flex min-h-dvh w-full flex-col bg-canvas md:max-w-[480px] md:border-x md:border-line md:shadow-xl">
       <a href="#main" className="sr-only focus:not-sr-only focus:p-4">
         본문 바로가기
       </a>
@@ -54,7 +54,7 @@ export function AppShell() {
           진료한장
         </Link>
         <fieldset className="min-w-0">
-          <legend className="text-muted mb-1 w-full text-right text-[11px]">
+          <legend className="mb-1 w-full text-right text-[11px] text-muted">
             글자 크기
           </legend>
           <div className="flex rounded-[8px] bg-[#edf0f5] p-[3px]">
@@ -78,10 +78,10 @@ export function AppShell() {
         <Outlet />
       </main>
       {!hiddenEmergencyBarPaths.has(pathname) && (
-        <footer className="bg-emergency-soft text-emergency sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] px-[24px] py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px]">
+        <footer className="sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] bg-emergency-soft px-[24px] py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px] text-emergency">
           <span>위급하면 바로 119</span>
           <a
-            className="bg-emergency flex h-[48px] shrink-0 items-center justify-center rounded-[8px] px-[14px] font-bold text-white"
+            className="flex h-[48px] shrink-0 items-center justify-center rounded-[8px] bg-emergency px-[14px] font-bold text-white"
             href="tel:119"
           >
             ☎ 119 전화
