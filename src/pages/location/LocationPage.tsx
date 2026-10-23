@@ -13,7 +13,7 @@ export function LocationPage() {
         <Illustration>
           <ScreenIcon name="pin" size={44} />
         </Illustration>
-        <PageTitle description="지금 있는 곳을 기준으로 가까운 순서로 보여드려요. 곧 허용 여부를 묻는 창이 나와요. ‘허용’을 눌러 주세요.">
+        <PageTitle description="지금 있는 곳을 기준으로 가까운 순서로 병원을 안내해요. 위치를 허용하고 싶지 않으면 지역을 직접 고를 수 있어요.">
           가까운 병원을 찾으려면
           <br />내 위치가 필요해요
         </PageTitle>

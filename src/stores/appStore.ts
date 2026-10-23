@@ -16,7 +16,7 @@ interface AppState {
 }
 
 const initialState: AppState = {
-  interview: { symptom: "무릎 통증", duration: "사흘째" },
+  interview: {},
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,

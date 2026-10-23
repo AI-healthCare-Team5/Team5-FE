@@ -42,7 +42,7 @@ export function RecordDetailPage() {
           aria-pressed={large}
           onClick={() => setLarge((value) => !value)}
         >
-          {large ? "원래 크기로 보기" : "글자 크게 보여주기"}
+          글자 크게 보여주기
         </Button>
         <ActionLink to="/records" variant="outline">
           내 기록으로 돌아가기

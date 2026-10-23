@@ -5,9 +5,9 @@ export function HospitalEmptyPage() {
     <>
       <PageTitle
         eyebrow="검색 결과"
-        description="반경 10km 안에 진료 중인 정형외과 정보가 없어요. 범위를 넓혀 다시 찾아볼 수 있어요."
+        description="반경 10km 안에 안내할 병원 정보가 없어요. 범위를 넓혀 다시 찾아볼 수 있어요."
       >
-        가까운 곳에서 정형외과를 찾지 못했어요
+        가까운 곳에서 병원을 찾지 못했어요
       </PageTitle>
       <div className="flex flex-col gap-3">
         <ActionLink to="/hospitals?radius=30">30km까지 넓혀서 찾기</ActionLink>

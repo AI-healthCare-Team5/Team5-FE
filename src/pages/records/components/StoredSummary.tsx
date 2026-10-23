@@ -21,22 +21,29 @@ export function StoredSummary({
     ["안내된 진료과", summary.department],
   ];
   return (
-    <div
-      style={large ? { fontSize: "1.222em" } : undefined}
-      className="overflow-hidden rounded-[20px] border border-line bg-surface"
-    >
+    <div className="overflow-hidden rounded-[20px] border border-line bg-surface">
       <div className="bg-ink px-5 py-4 text-white">
-        <h2 className="text-[1.111em] font-bold">진료 요약지</h2>
-        <p className="text-[0.889em] text-brand-ring">내 기록 · {date} 저장</p>
+        <h2
+          className={`font-bold ${large ? "text-[1.358rem]" : "text-[1.111rem]"}`}
+        >
+          진료 요약지
+        </h2>
+        <p
+          className={`text-brand-ring ${large ? "text-[1.086rem]" : "text-[0.889rem]"}`}
+        >
+          내 기록 · {date} 저장
+        </p>
       </div>
       <dl className="divide-y divide-line px-5">
         {items.map(([label, value]) => (
           <div key={label} className="py-4">
-            <dt className="mb-1 text-[0.889em] font-medium text-subtle">
+            <dt
+              className={`mb-1 font-medium text-subtle ${large ? "text-[1.086rem]" : "text-[0.889rem]"}`}
+            >
               {label}
             </dt>
             <dd
-              className={`text-[1.111em] font-bold ${label === "안내된 진료과" ? "text-brand-strong" : ""}`}
+              className={`font-bold ${large ? "text-[1.358rem]" : "text-[1.111rem]"} ${label === "안내된 진료과" ? "text-brand-strong" : ""}`}
             >
               {value}
             </dd>

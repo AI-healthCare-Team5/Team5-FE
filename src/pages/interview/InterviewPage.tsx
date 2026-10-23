@@ -10,24 +10,30 @@ export function InterviewPage() {
   const question = interviewQuestions[Math.min(step, total - 1)];
   return (
     <>
-      <Progress current={Math.min(step + 1, total)} total={total} />
-      <div className="flex flex-col gap-3">
-        <p className="text-[0.889rem] font-medium text-muted">
-          지금까지 알려주신 내용
-        </p>
-        <ul className="flex flex-wrap gap-2">
-          {Object.entries(interview)
-            .filter(([, value]) => value !== "잘 모르겠어요")
-            .map(([key, value]) => (
-              <li
-                key={key}
-                className="rounded-full bg-brand-soft px-[14px] py-[6px] text-[0.889rem] font-medium text-brand-strong"
-              >
-                {value}
-              </li>
-            ))}
-        </ul>
-      </div>
+      <Progress
+        current={Math.min(step + 1, total)}
+        total={total}
+        label={complete ? "문진 완료" : question.group}
+      />
+      {Object.values(interview).length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[0.889rem] font-medium text-muted">
+            지금까지 알려주신 내용
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {Object.entries(interview)
+              .filter(([, value]) => value !== "잘 모르겠어요")
+              .map(([key, value]) => (
+                <li
+                  key={key}
+                  className="rounded-full bg-brand-soft px-[14px] py-[6px] text-[0.889rem] font-medium text-brand-strong"
+                >
+                  {value}
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
       <div className="flex flex-col gap-3">
         <section className="rounded-[24px] bg-ink px-6 pt-6 pb-7 text-white">
           <p className="mb-3 text-[0.889rem] font-bold tracking-[0.3px] text-question-hint">

@@ -107,14 +107,16 @@ export function PageTitle({
 export function Progress({
   current,
   total,
+  label,
 }: {
   current: number;
   total: number;
+  label: string;
 }) {
   return (
     <div className="space-y-2" aria-label={`질문 ${current} / ${total}`}>
       <div className="flex justify-between gap-2 text-[0.889rem]">
-        <span className="font-bold text-brand-strong">기본 정보</span>
+        <span className="font-bold text-brand-strong">{label}</span>
         <span className="text-muted">
           질문 {current} / {total}
         </span>

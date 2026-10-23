@@ -1,6 +1,6 @@
 import { DesignIcon } from "@/components/DesignIcon";
 import { ScreenIcon } from "@/components/ScreenElements";
-import { ActionLink, Disclaimer, PageTitle } from "@/components/ui";
+import { Disclaimer, PageTitle } from "@/components/ui";
 export function EmergencyPage() {
   return (
     <>
@@ -20,14 +20,7 @@ export function EmergencyPage() {
         <DesignIcon name="phone" size={30} />
         119에 전화하기
       </a>
-      <ActionLink to="/hospitals?emergency=true" variant="outline">
-        가까운 응급실 찾기
-      </ActionLink>
       <div className="flex flex-col gap-3">
-        <ActionLink to="/emergency-card">
-          <ScreenIcon name="card-white" size={24} />
-          구급대원에게 보여줄 응급 카드
-        </ActionLink>
         <Disclaimer>
           정해진 위험 신호 기준에 따른 안내이며, 진단이 아니에요.
         </Disclaimer>

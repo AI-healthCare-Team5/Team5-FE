@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 export type ScreenIconName =
   | "mic"
   | "shield"
-  | "lock"
   | "write"
   | "mic-white"
   | "mic-off"
@@ -16,7 +15,6 @@ export type ScreenIconName =
   | "warning"
   | "check"
   | "warning-large"
-  | "card-white"
   | "record"
   | "trash"
   | "kakao"

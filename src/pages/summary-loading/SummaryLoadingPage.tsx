@@ -21,7 +21,7 @@ export function SummaryLoadingPage() {
         className="flex flex-col items-start gap-5"
       >
         <Spinner />
-        <PageTitle description="말씀하신 내용을 정리하고 있어요. 보통 몇 초 걸려요.">
+        <PageTitle description="요약지 안내를 준비 중이에요.">
           요약지를
           <br />
           만드는 중이에요
@@ -55,7 +55,7 @@ export function SummaryLoadingPage() {
       <Notice>
         <span className="flex items-start gap-3">
           <DesignIcon name="info" />
-          <span>요약지가 나오면 잘못된 내용을 직접 고칠 수 있어요.</span>
+          <span>요약지 보기와 수정은 준비 중이에요.</span>
         </span>
       </Notice>
       <Button variant="quiet" onClick={() => navigate("/", { replace: true })}>

@@ -58,7 +58,7 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
               items={[
                 "인터넷 연결을 확인해요",
                 "‘다시 시도’를 눌러요",
-                "계속 안 되면 로그인 없이 써 보세요. 병원 안내, 요약지, 119는 그대로 쓸 수 있어요",
+                "계속 안 되면 로그인 없이 써 보세요. 119 전화는 바로 사용할 수 있어요",
               ]}
             />
           </Card>
@@ -92,23 +92,25 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
           <Notice>
             <span className="flex items-start gap-3">
               <DesignIcon name="info" />
-              <span>
-                로그인하지 않아도 병원 안내, 요약지, 119는 모두 쓸 수 있어요.
-              </span>
+              <span>로그인하지 않아도 119 전화는 바로 사용할 수 있어요.</span>
             </span>
           </Notice>
           <div className="flex flex-col gap-3">
             <button
               type="button"
+              aria-label="카카오 로그인"
               onClick={login}
-              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center gap-[10px] rounded-[12px] bg-kakao px-5 py-3 font-bold text-kakao-ink"
+              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center overflow-hidden rounded-[12px] bg-kakao"
             >
-              <ScreenIcon name="kakao" size={24} />
-              카카오 로그인
+              <img
+                src="/images/kakao-login.svg"
+                alt=""
+                className="h-auto w-full"
+              />
             </button>
             <p className="text-[0.889rem] text-muted">
-              카카오 계정에서 닉네임만 받아요. 닉네임 제공은 선택이에요. 처음 한
-              번은 기록 저장 동의가 필요해요.
+              초안 · 닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록
+              저장 동의가 필요해요.
             </p>
             <ActionLink to="/" variant="outline">
               로그인 없이 계속하기

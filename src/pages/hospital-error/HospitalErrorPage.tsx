@@ -1,7 +1,7 @@
 import { EmergencyHelp } from "@/components/EmergencyHelp";
 import { DesignIcon } from "@/components/DesignIcon";
 import { Illustration, ScreenIcon } from "@/components/ScreenElements";
-import { ActionLink, Card, PageTitle } from "@/components/ui";
+import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
 export function HospitalErrorPage() {
   return (
     <>
@@ -21,14 +21,17 @@ export function HospitalErrorPage() {
         </PageTitle>
       </div>
       <div className="flex flex-col gap-3">
-        <ActionLink to="/hospitals">
+        <Button disabled>
           <ScreenIcon name="retry-white" size={24} />
           다시 시도
-        </ActionLink>
-        <ActionLink to="/summary" variant="outline">
+        </Button>
+        <Button disabled variant="outline">
           <ScreenIcon name="document" size={24} />
           요약지 먼저 보기
-        </ActionLink>
+        </Button>
+        <p className="text-[0.889rem] text-muted">
+          병원 검색과 요약지 안내는 준비 중이에요.
+        </p>
       </div>
       <Card>
         <h2 className="mb-4 text-[1.111rem] font-bold">
@@ -40,10 +43,6 @@ export function HospitalErrorPage() {
             <span className="text-ink">
               가까운 병원에 전화해서 진료 여부를 확인해요
             </span>
-          </li>
-          <li className="flex items-start gap-[14px]">
-            <ScreenIcon name="document" />
-            <span>요약지는 지금도 볼 수 있어요</span>
           </li>
         </ul>
         <EmergencyHelp />

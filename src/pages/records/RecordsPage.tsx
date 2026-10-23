@@ -51,9 +51,7 @@ export function RecordsPage() {
                 </h2>
                 <p className="mt-1 text-[0.889rem] text-muted">
                   {record.summary.duration}
-                  {record.summary.symptom.includes("무릎")
-                    ? ` · 붓기 ${record.summary.swelling}`
-                    : ""}
+                  {` · 붓기 ${record.summary.swelling}`}
                 </p>
                 <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-6">
                   <ActionLink to={`/records/${record.id}`} variant="outline">

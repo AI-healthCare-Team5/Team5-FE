@@ -22,7 +22,7 @@ export function MicGuidePage({
           description={
             unavailable
               ? "마이크 사용이 허용되지 않았거나, 이 기기에서는 마이크를 지원하지 않아요. 글로 입력해도 병원 안내와 요약지는 똑같이 받을 수 있어요."
-              : "말씀하신 내용을 글자로 바꾸려면 마이크가 필요해요. 곧 허용 여부를 묻는 창이 나와요. ‘허용’을 눌러 주세요."
+              : "말씀하신 내용을 글자로 바꾸려면 마이크가 필요해요. 아래 그림에서 허용 안내를 확인해 주세요."
           }
         >
           {unavailable ? (
@@ -102,7 +102,6 @@ export function MicGuidePage({
           <IconList
             items={[
               { icon: "shield", text: "목소리는 저장하지 않아요" },
-              { icon: "lock", text: "안전한 연결로 전달돼요" },
               {
                 icon: "write",
                 text: "마이크가 어려우시면 글로 입력하거나 버튼을 눌러 답할 수 있어요",
