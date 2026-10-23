@@ -1,6 +1,7 @@
 /* Tailwind preflight가 기본 초기화를 담당하므로 프로젝트에 필요한 차이만 둡니다. */
 @layer base {
   html {
+    font-size: 18px;
     min-width: 320px;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -9,6 +10,22 @@
   }
 
   body {
-    min-height: 100svh;
+    min-height: 100dvh;
+    color: var(--color-ink);
+    background: var(--color-desktop);
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  button:not(:disabled),
+  a,
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 3px;
   }
 }
