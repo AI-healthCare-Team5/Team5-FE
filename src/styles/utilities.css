@@ -4,3 +4,18 @@
     margin-inline: auto;
   }
 }
+@keyframes voice-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .voice-start {
+    animation: voice-breathe 2.8s ease-in-out infinite;
+  }
+}
