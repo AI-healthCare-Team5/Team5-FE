@@ -3,6 +3,14 @@ import { createSummary } from "@/stores/model";
 import { interviewQuestions } from "@/stores/interviewQuestions";
 
 describe("문진 화면 연결 규격", () => {
+  it.each([{}, { symptom: "기침" }, { symptom: "무릎 통증" }])(
+    "추천 결과가 없는 문진 %j에 진료과를 임의로 지정하지 않는다",
+    (interview) => {
+      expect(createSummary(interview).department).toBe(
+        "아직 안내되지 않았어요",
+      );
+    },
+  );
   it("확인하지 않은 건강 정보를 만들어 채우지 않는다", () => {
     const summary = createSummary({ symptom: "무릎 통증", age: "70대" });
     expect(summary.age).toBe("70대");
