@@ -1,32 +1,48 @@
 import { useNavigate } from "react-router";
+import {
+  IconList,
+  Illustration,
+  ScreenIcon,
+} from "@/components/ScreenElements";
 import { ActionLink, Button, PageTitle } from "@/components/ui";
-
 export function LocationPage() {
   const navigate = useNavigate();
   return (
     <>
-      <span
-        aria-hidden="true"
-        className="grid h-[64px] w-[64px] place-items-center rounded-full bg-brand-soft text-[32px] text-brand"
-      >
-        ⌾
-      </span>
-      <PageTitle description="지금 있는 곳을 기준으로 가까운 병원을 안내해요. 위치를 허용하지 않아도 지역을 직접 골라 병원을 찾을 수 있어요.">
-        가까운 병원을 찾으려면
-        <br />내 위치가 필요해요
-      </PageTitle>
-      <ul className="space-y-4 text-[0.889rem] text-muted">
-        <li>⌾ 위치는 병원 안내에 쓰여요.</li>
-        <li>⌾ 거리는 실제 이동 경로와 다를 수 있어요.</li>
-        <li>⌾ 위치를 알려주지 않아도 지역을 직접 고를 수 있어요.</li>
-      </ul>
-      <ActionLink to="/hospitals">위치 허용하고 병원 찾기</ActionLink>
-      <ActionLink to="/region" variant="outline">
-        지역을 직접 고를게요
-      </ActionLink>
-      <Button variant="quiet" onClick={() => navigate(-1)}>
-        ← 이전으로
-      </Button>
+      <div className="flex flex-col gap-5">
+        <Illustration>
+          <ScreenIcon name="pin" size={44} />
+        </Illustration>
+        <PageTitle description="지금 있는 곳을 기준으로 가까운 순서로 보여드려요. 곧 허용 여부를 묻는 창이 나와요. ‘허용’을 눌러 주세요.">
+          가까운 병원을 찾으려면
+          <br />내 위치가 필요해요
+        </PageTitle>
+      </div>
+      <IconList
+        items={[
+          { icon: "shield", text: "위치는 병원 안내에 쓰여요" },
+          {
+            icon: "navigation",
+            text: "가까운 순서로 진료 중인 병원을 보여드려요",
+          },
+          {
+            icon: "write",
+            text: "허용하고 싶지 않으면 지역을 직접 고를 수 있어요",
+          },
+        ]}
+      />
+      <div className="flex flex-col gap-3">
+        <ActionLink to="/hospitals">
+          <ScreenIcon name="pin-white" size={24} />
+          위치 허용하고 병원 찾기
+        </ActionLink>
+        <ActionLink to="/region" variant="outline">
+          지역을 직접 고를게요
+        </ActionLink>
+        <Button variant="quiet" onClick={() => navigate(-1)}>
+          ← 이전으로
+        </Button>
+      </div>
     </>
   );
 }

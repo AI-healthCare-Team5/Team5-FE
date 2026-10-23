@@ -2,14 +2,14 @@ import type { SavedRecord, SummaryData } from "@/stores/model";
 
 export const sampleSummary: SummaryData = {
   age: "70대",
-  gender: "남성",
+  gender: "여성",
   symptom: "무릎 통증",
-  duration: "사흘째",
-  swelling: "조금 부었어요",
+  duration: "3일 전부터",
+  swelling: "있음",
   fall: "없음",
-  medicine: "혈압약 (이름 모름)",
+  medicine: "혈압약 (매일 아침)",
   conditions: "고혈압",
-  allergy: "확인 못 했어요",
+  allergy: "약 (페니실린)",
   department: "정형외과",
 };
 
@@ -17,23 +17,28 @@ export function createSampleRecords(): SavedRecord[] {
   return [
     {
       id: "sample-knee",
-      createdAt: "2026-10-23T00:00:00Z",
+      createdAt: "2026-10-16T00:00:00Z",
       summary: { ...sampleSummary },
     },
     {
       id: "sample-cough",
-      createdAt: "2026-10-20T00:00:00Z",
+      createdAt: "2026-09-28T00:00:00Z",
       summary: {
         ...sampleSummary,
         symptom: "기침",
-        duration: "이틀째",
+        duration: "일주일 전부터",
         department: "내과",
       },
     },
     {
-      id: "sample-back",
-      createdAt: "2026-10-16T00:00:00Z",
-      summary: { ...sampleSummary, symptom: "허리 통증", duration: "일주일째" },
+      id: "sample-dizziness",
+      createdAt: "2026-09-03T00:00:00Z",
+      summary: {
+        ...sampleSummary,
+        symptom: "어지러움",
+        duration: "이틀 전부터",
+        department: "내과",
+      },
     },
   ];
 }

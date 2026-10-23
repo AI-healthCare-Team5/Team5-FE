@@ -1,7 +1,12 @@
 import { useNavigate } from "react-router";
-import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
+import { DesignIcon } from "@/components/DesignIcon";
+import {
+  Illustration,
+  NumberedSteps,
+  ScreenIcon,
+} from "@/components/ScreenElements";
+import { ActionLink, Card, Notice, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
-
 export function LoginPage({ failed = false }: { failed?: boolean }) {
   const navigate = useNavigate();
   const { recordConsent, returnTo } = useAppStore();
@@ -11,80 +16,105 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
   }
   return (
     <>
-      <PageTitle
-        description={
-          failed
-            ? "괜찮아요. 다시 시도하거나 로그인 없이 계속할 수 있어요."
-            : "내 진료 기록을 한곳에 모아 두고, 필요할 때 다시 꺼내 볼 수 있어요."
-        }
-      >
-        {failed ? (
-          <>
-            로그인을
-            <br />
-            마치지 못했어요
-          </>
-        ) : (
-          <>
-            로그인하면 기록을
-            <br />
-            모아 볼 수 있어요
-          </>
+      <div className="flex flex-col gap-5">
+        {failed && (
+          <Illustration amber>
+            <ScreenIcon name="error" size={44} />
+          </Illustration>
         )}
-      </PageTitle>
+        <PageTitle
+          description={
+            failed
+              ? "카카오 로그인을 취소했거나, 연결이 불안정했어요. 다시 시도하거나, 로그인 없이 계속 쓸 수 있어요."
+              : "만든 요약지를 내 기록에 보관하고, 필요할 때 다시 열어 볼 수 있어요."
+          }
+        >
+          {failed ? (
+            <>
+              로그인을
+              <br />
+              마치지 못했어요
+            </>
+          ) : (
+            <>
+              로그인하면 기록을
+              <br />
+              모아 볼 수 있어요
+            </>
+          )}
+        </PageTitle>
+      </div>
       {failed ? (
         <>
-          <ActionLink to="/login">다시 시도</ActionLink>
-          <ActionLink to="/" variant="outline">
-            로그인 없이 계속하기
-          </ActionLink>
+          <div className="flex flex-col gap-3">
+            <ActionLink to="/login">다시 시도</ActionLink>
+            <ActionLink to="/" variant="outline">
+              로그인 없이 계속하기
+            </ActionLink>
+          </div>
           <Card>
-            <h2 className="font-bold">이렇게 해 보세요</h2>
-            <ol className="mt-3 list-decimal space-y-3 pl-5 text-[0.889rem] text-muted">
-              <li>인터넷 연결을 확인해 주세요.</li>
-              <li>카카오 로그인 창을 닫았다면 다시 시도해 주세요.</li>
-              <li>
-                계속 어렵다면 로그인 없이 병원 안내와 요약지를 이용할 수 있어요.
-              </li>
-            </ol>
+            <h2 className="mb-4 text-[1.111rem] font-bold">이렇게 해 보세요</h2>
+            <NumberedSteps
+              items={[
+                "인터넷 연결을 확인해요",
+                "‘다시 시도’를 눌러요",
+                "계속 안 되면 로그인 없이 써 보세요. 병원 안내, 요약지, 119는 그대로 쓸 수 있어요",
+              ]}
+            />
           </Card>
         </>
       ) : (
         <>
           <Card>
-            <ul className="space-y-4">
-              <li>✓ 만든 진료 요약지를 보관해요.</li>
-              <li>✓ 지난 기록을 다시 볼 수 있어요.</li>
-              <li>✓ 필요 없는 기록은 지울 수 있어요.</li>
+            <ul className="flex flex-col gap-4">
+              {(
+                [
+                  { icon: "document", text: "요약지를 내 기록에 보관해요" },
+                  {
+                    icon: "record",
+                    text: "문진 내용과 안내받은 진료과를 다시 볼 수 있어요",
+                  },
+                  {
+                    icon: "trash",
+                    text: "필요 없는 기록은 직접 지울 수 있어요",
+                  },
+                ] as const
+              ).map(({ icon, text }) => (
+                <li key={icon} className="flex items-start gap-[14px]">
+                  <span className="grid size-[44px] shrink-0 place-items-center rounded-[14px] bg-brand-soft">
+                    <ScreenIcon name={icon} size={24} />
+                  </span>
+                  <span className="min-w-0">{text}</span>
+                </li>
+              ))}
             </ul>
           </Card>
-          <button
-            type="button"
-            aria-label="카카오 로그인"
-            onClick={login}
-            className="flex min-h-[3.4rem] w-full items-center justify-center overflow-hidden rounded-[12px] bg-[#fee500]"
-          >
-            <img
-              src="/images/kakao-login.svg"
-              alt="카카오 로그인"
-              className="h-auto w-full"
-            />
-          </button>
-          <p className="text-[0.833rem] text-muted">
-            닉네임 제공은 선택이에요. 이메일과 전화번호는 받지 않아요.
-          </p>
-          <ActionLink to="/" variant="outline">
-            로그인 없이 계속하기
-          </ActionLink>
-          <p className="text-[0.833rem] text-muted">
-            로그인하지 않아도 병원 안내와 진료 요약지를 이용할 수 있어요.
-          </p>
+          <Notice>
+            <span className="flex items-start gap-3">
+              <DesignIcon name="info" />
+              <span>
+                로그인하지 않아도 병원 안내, 요약지, 119는 모두 쓸 수 있어요.
+              </span>
+            </span>
+          </Notice>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={login}
+              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center gap-[10px] rounded-[12px] bg-kakao px-5 py-3 font-bold text-kakao-ink"
+            >
+              <ScreenIcon name="kakao" size={24} />
+              카카오 로그인
+            </button>
+            <p className="text-[0.889rem] text-muted">
+              카카오 계정에서 닉네임만 받아요. 닉네임 제공은 선택이에요. 처음 한
+              번은 기록 저장 동의가 필요해요.
+            </p>
+            <ActionLink to="/" variant="outline">
+              로그인 없이 계속하기
+            </ActionLink>
+          </div>
         </>
-      )}
-      {failed && (
-        <Button variant="quiet" onClick={() => navigate("/")}>
-          처음으로
-        </Button>
       )}
     </>
   );

@@ -1,5 +1,11 @@
-import { MicrophoneIcon } from "@/components/MicrophoneIcon";
-import { ActionLink, Card, PageTitle } from "@/components/ui";
+import { DesignIcon } from "@/components/DesignIcon";
+import {
+  IconList,
+  Illustration,
+  NumberedSteps,
+  ScreenIcon,
+} from "@/components/ScreenElements";
+import { ActionLink, Card, Notice, PageTitle } from "@/components/ui";
 
 export function MicGuidePage({
   unavailable = false,
@@ -8,74 +14,110 @@ export function MicGuidePage({
 }) {
   return (
     <>
-      <span className="grid h-[64px] w-[64px] place-items-center rounded-full bg-brand-soft text-brand">
-        <MicrophoneIcon />
-      </span>
-      <PageTitle
-        description={
-          unavailable
-            ? "마이크 권한이 꺼져 있거나, 지금 브라우저에서 마이크를 쓸 수 없어요."
-            : "편안하게 내용을 말씀해 주시면 마이크가 목소리를 듣고, 내용을 여쭤볼 수 있게 도와드려요. 부담 없이 눌러 주세요."
-        }
-      >
-        {unavailable ? (
-          "마이크를 사용할 수 없어요"
-        ) : (
-          <>
-            마이크를 켜도
-            <br />
-            될까요?
-          </>
-        )}
-      </PageTitle>
+      <div className="flex flex-col gap-5">
+        <Illustration amber={unavailable}>
+          <ScreenIcon name={unavailable ? "mic-off" : "mic"} size={44} />
+        </Illustration>
+        <PageTitle
+          description={
+            unavailable
+              ? "마이크 사용이 허용되지 않았거나, 이 기기에서는 마이크를 지원하지 않아요. 글로 입력해도 병원 안내와 요약지는 똑같이 받을 수 있어요."
+              : "말씀하신 내용을 글자로 바꾸려면 마이크가 필요해요. 곧 허용 여부를 묻는 창이 나와요. ‘허용’을 눌러 주세요."
+          }
+        >
+          {unavailable ? (
+            <>
+              마이크를
+              <br />쓸 수 없어요
+            </>
+          ) : (
+            <>
+              마이크를 켜도
+              <br />
+              될까요?
+            </>
+          )}
+        </PageTitle>
+      </div>
       {unavailable ? (
         <>
-          <ActionLink to="/text-input">글로 입력하기</ActionLink>
-          <ActionLink to="/mic-guide" variant="outline">
-            마이크 다시 시도
-          </ActionLink>
           <Card>
-            <h2 className="font-bold">이렇게 해 보세요</h2>
-            <ol className="mt-3 list-decimal space-y-3 pl-5 text-[0.889rem] text-muted">
-              <li>브라우저 설정에서 마이크를 허용해 주세요.</li>
-              <li>카카오톡 안에서 열었다면 Chrome이나 Safari로 열어 주세요.</li>
-              <li>마이크를 쓰기 어려우면 글로 입력해도 괜찮아요.</li>
-            </ol>
+            <h2 className="mb-4 text-[1.111rem] font-bold">
+              마이크를 다시 켜려면
+            </h2>
+            <NumberedSteps
+              items={[
+                "주소창 옆의 자물쇠 또는 설정 아이콘을 눌러요",
+                "‘마이크’를 ‘허용’으로 바꿔요",
+                "이 화면으로 돌아와 ‘마이크 다시 시도’를 눌러요",
+              ]}
+            />
+            <p className="mt-4 text-[0.889rem] text-muted">
+              기기와 브라우저에 따라 화면이 조금 달라요.
+            </p>
           </Card>
-          <ActionLink to="/" variant="quiet">
-            처음으로
-          </ActionLink>
+          <Notice>
+            <span className="flex items-start gap-3">
+              <DesignIcon name="info" />
+              <span>
+                메신저 같은 앱 안에서 연 화면에서는 마이크가 막혀 있을 수
+                있어요. 이때는 글로 입력해 주세요.
+              </span>
+            </span>
+          </Notice>
+          <div className="flex flex-col gap-3">
+            <ActionLink to="/text-input">
+              <ScreenIcon name="write-white" size={24} />
+              글로 입력하기
+            </ActionLink>
+            <ActionLink to="/mic-guide" variant="outline">
+              <ScreenIcon name="mic-blue" size={24} />
+              마이크 다시 시도
+            </ActionLink>
+            <ActionLink to="/" variant="quiet">
+              처음으로
+            </ActionLink>
+          </div>
         </>
       ) : (
         <>
-          <Card>
-            <p className="mb-3 text-[0.833rem] text-muted">
-              아래와 같은 안내가 나타나면 허용을 눌러 주세요.
+          <div className="rounded-[20px] bg-notice px-5 py-[18px]">
+            <p className="mb-3 text-[0.889rem] font-medium text-muted">
+              이런 창이 화면 위쪽에 나와요 (예시 그림)
             </p>
-            <p className="font-semibold">
-              이 사이트에서 마이크를 사용하려고 합니다
-            </p>
-            <div aria-hidden="true" className="mt-3 flex gap-2">
-              <span className="flex-1 rounded-full bg-brand px-4 py-2 text-center text-white">
-                허용
-              </span>
-              <span className="flex-1 rounded-full bg-canvas px-4 py-2 text-center">
-                차단
-              </span>
+            <div className="rounded-[16px] border border-line bg-surface p-4 shadow-sm">
+              <p className="font-medium">
+                이 사이트에서 마이크를 사용하려고 합니다
+              </p>
+              <div aria-hidden="true" className="mt-3 flex gap-3">
+                <span className="flex-1 rounded-full bg-brand py-[10px] text-center font-bold text-white">
+                  허용
+                </span>
+                <span className="flex-1 rounded-full bg-notice py-[10px] text-center font-medium text-notice-ink">
+                  차단
+                </span>
+              </div>
             </div>
-          </Card>
-          <ul className="space-y-3 text-[0.889rem] text-muted">
-            <li>♧ 목소리는 저장하지 않아요.</li>
-            <li>♧ 필요한 내용만 질문할게요.</li>
-            <li>
-              ♧ 마이크가 켜지지 않으면 글로 입력하거나 다른 브라우저를 쓸 수
-              있어요.
-            </li>
-          </ul>
-          <ActionLink to="/interview">마이크 허용하고 시작</ActionLink>
-          <ActionLink to="/text-input" variant="outline">
-            글로 입력할게요
-          </ActionLink>
+          </div>
+          <IconList
+            items={[
+              { icon: "shield", text: "목소리는 저장하지 않아요" },
+              { icon: "lock", text: "안전한 연결로 전달돼요" },
+              {
+                icon: "write",
+                text: "마이크가 어려우시면 글로 입력하거나 버튼을 눌러 답할 수 있어요",
+              },
+            ]}
+          />
+          <div className="flex flex-col gap-3">
+            <ActionLink to="/interview">
+              <ScreenIcon name="mic-white" />
+              마이크 허용하고 시작
+            </ActionLink>
+            <ActionLink to="/text-input" variant="outline">
+              글로 입력할게요
+            </ActionLink>
+          </div>
         </>
       )}
     </>
