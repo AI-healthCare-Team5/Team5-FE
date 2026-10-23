@@ -7,6 +7,7 @@ import { InterviewPage } from "@/pages/interview/InterviewPage";
 import { LocationPage } from "@/pages/location/LocationPage";
 import { HospitalEmptyPage } from "@/pages/hospital-empty/HospitalEmptyPage";
 import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
+import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 
 const router = createBrowserRouter([
   {
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
       { path: "/location", element: <LocationPage /> },
       { path: "/hospital-empty", element: <HospitalEmptyPage /> },
       { path: "/hospital-error", element: <HospitalErrorPage /> },
+      { path: "/summary-loading", element: <SummaryLoadingPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
