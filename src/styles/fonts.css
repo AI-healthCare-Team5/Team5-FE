@@ -1,5 +1,6 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
+
 @theme {
   --font-sans:
-    "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo",
-    "Malgun Gothic", sans-serif;
+    "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
