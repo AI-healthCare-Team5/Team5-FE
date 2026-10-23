@@ -3,6 +3,11 @@
   --color-brand: #2563eb;
   --color-brand-strong: #1d4ed8;
   --color-brand-soft: #e8eefb;
+  --color-brand-ring: #c7d6fb;
+  --color-brand-subtle: #eef3ff;
+  --color-notice: #f2f4f7;
+  --color-notice-ink: #344054;
+  --color-control-surface: #eef2f8;
   --color-ink: #0e1116;
   --color-muted: #4a5363;
   --color-subtle: #667085;
@@ -12,6 +17,8 @@
   --color-control: #8a94a6;
   --color-emergency: #b42318;
   --color-emergency-soft: #fef3f2;
+  --color-emergency-ink: #912018;
+  --color-emergency-line: #fecdca;
   --color-success: #067647;
   --color-amber-soft: #fffaeb;
   --color-amber-line: #fedf89;
