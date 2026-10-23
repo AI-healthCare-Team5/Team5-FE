@@ -44,16 +44,16 @@ export function AppShell() {
       <a href="#main" className="sr-only focus:not-sr-only focus:p-4">
         본문 바로가기
       </a>
-      <header className="flex min-h-[88px] flex-wrap items-center justify-between gap-2 px-6 py-4">
+      <header className="flex min-h-[88px] flex-wrap items-end justify-between gap-x-2 gap-y-4 px-6 py-4">
         <Link
           to="/"
           aria-label="진료한장 처음으로"
-          className="flex min-h-[44px] items-center gap-[8px] text-[16px] font-bold"
+          className="mb-[3px] flex min-h-[44px] items-center gap-[8px] text-[16px] font-bold"
         >
           <img src="/favicon.svg" alt="" className="h-[30px] w-[30px]" />
           진료한장
         </Link>
-        <fieldset className="min-w-0">
+        <fieldset className="ml-auto min-w-0">
           <legend className="mb-1 w-full text-right text-[11px] text-muted">
             글자 크기
           </legend>
@@ -74,11 +74,15 @@ export function AppShell() {
           </div>
         </fieldset>
       </header>
-      <main id="main" className="flex-1 space-y-6 px-6 pt-4 pb-8">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="flex flex-1 flex-col gap-6 px-6 pt-4 pb-8"
+      >
         <Outlet />
       </main>
       {!hiddenEmergencyBarPaths.has(pathname) && (
-        <footer className="sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] bg-emergency-soft px-[24px] py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px] text-emergency">
+        <footer className="sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] bg-emergency-soft px-6 py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px] text-emergency">
           <span>위급하면 바로 119</span>
           <a
             className="flex h-[48px] shrink-0 items-center justify-center rounded-[8px] bg-emergency px-[14px] font-bold text-white"
