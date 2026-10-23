@@ -13,6 +13,7 @@ import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPag
 import { LoginPage } from "@/pages/login/LoginPage";
 import { RecordConsentPage } from "@/pages/record-consent/RecordConsentPage";
 import { RecordsPage } from "@/pages/records/RecordsPage";
+import { RecordDetailPage } from "@/pages/records/RecordDetailPage";
 
 const router = createBrowserRouter([
   {
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "/login/failed", element: <LoginPage failed /> },
       { path: "/record-consent", element: <RecordConsentPage /> },
       { path: "/records", element: <RecordsPage /> },
+      { path: "/records/:id", element: <RecordDetailPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
