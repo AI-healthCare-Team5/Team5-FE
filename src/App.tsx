@@ -3,6 +3,7 @@ import { StartPage } from "@/pages/start/StartPage";
 import { NotFoundPage } from "@/pages/not-found/NotFoundPage";
 import { AppShell } from "@/components/layout/AppShell";
 import { MicGuidePage } from "@/pages/mic-guide/MicGuidePage";
+import { InterviewPage } from "@/pages/interview/InterviewPage";
 
 const router = createBrowserRouter([
   {
@@ -11,6 +12,7 @@ const router = createBrowserRouter([
       { path: "/", element: <StartPage /> },
       { path: "/mic-guide", element: <MicGuidePage /> },
       { path: "/mic-guide/unavailable", element: <MicGuidePage unavailable /> },
+      { path: "/interview", element: <InterviewPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
