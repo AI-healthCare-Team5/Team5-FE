@@ -10,6 +10,7 @@ import {
   hospitalMarkerClassName,
   userLocationClassName,
 } from "@/components/map/markerStyle";
+import { syncMarkerLabels } from "@/components/map/markerLabels";
 import type { HospitalMapProps } from "@/components/map/types";
 
 interface KakaoHospitalMapProps extends HospitalMapProps {
@@ -51,6 +52,8 @@ export function KakaoHospitalMap({
     hospitals.map(({ id, latitude, longitude }) => [id, latitude, longitude]),
     userLocation && [userLocation.latitude, userLocation.longitude],
   ]);
+  // 이름만 바뀌면 지도 범위를 다시 맞추지 않고 마커의 읽기 이름만 바꿉니다.
+  const labelsKey = JSON.stringify(hospitals.map(({ id, name }) => [id, name]));
 
   useEffect(() => {
     latestRef.current = {
@@ -97,7 +100,6 @@ export function KakaoHospitalMap({
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = String(index + 1);
-      button.setAttribute("aria-label", `${hospital.name} 선택`);
       button.addEventListener("click", () =>
         latestRef.current.onSelectHospital(hospital.id),
       );
@@ -143,6 +145,11 @@ export function KakaoHospitalMap({
       markers.clear();
     };
   }, [kakao, pointsKey]);
+
+  useEffect(() => {
+    if (!kakao) return;
+    syncMarkerLabels(markersRef.current, latestRef.current.hospitals);
+  }, [kakao, pointsKey, labelsKey]);
 
   useEffect(() => {
     if (!kakao) return;
