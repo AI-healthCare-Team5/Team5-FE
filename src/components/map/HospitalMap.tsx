@@ -28,7 +28,7 @@ export function HospitalMap({
       <div
         role="group"
         aria-label="병원 위치 예시"
-        className="relative h-[240px] overflow-hidden rounded-[12px] border border-line bg-[#e8eefb]"
+        className="relative h-[240px] overflow-hidden rounded-[12px] border border-line bg-brand-soft"
       >
         <svg
           aria-hidden="true"
@@ -39,10 +39,14 @@ export function HospitalMap({
         >
           <path
             d="M0 180 340 20M110 0 160 240M270 0 220 240M0 60 340 130"
-            stroke="white"
+            stroke="var(--color-surface)"
             strokeWidth="18"
           />
-          <path d="M0 180 340 20" stroke="#c7d6fb" strokeWidth="2" />
+          <path
+            d="M0 180 340 20"
+            stroke="var(--color-brand-ring)"
+            strokeWidth="2"
+          />
         </svg>
         {hospitals.map((hospital, index) => (
           <button
@@ -65,7 +69,7 @@ export function HospitalMap({
             표시할 병원이 없어요.
           </p>
         )}
-        <span className="absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[12px] text-muted">
+        <span className="absolute bottom-2 left-2 rounded bg-surface/90 px-2 py-1 text-[0.889rem] text-muted">
           병원 위치 예시
         </span>
       </div>

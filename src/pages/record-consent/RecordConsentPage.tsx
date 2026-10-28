@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
+import { ScreenIcon } from "@/components/ScreenElements";
 
 const items = [
   [
@@ -18,7 +19,7 @@ const items = [
   ],
   [
     "동의하지 않으면요?",
-    "로그인 없이도 병원 안내, 요약지, 119는 그대로 쓸 수 있어요. 내 기록 보관만 쓸 수 없어요.",
+    "동의하지 않으면 내 기록을 보관할 수 없어요. 119 전화는 로그인과 동의 없이 사용할 수 있어요.",
   ],
   [
     "동의를 거두려면요?",
@@ -49,25 +50,32 @@ export function RecordConsentPage() {
   }
   return (
     <>
-      <PageTitle>
+      <PageTitle description="읽어 보고 동의 여부를 정해 주세요.">
         진료 기록
         <br />
         저장 동의
       </PageTitle>
       <Notice tone="amber">
-        초안 · 정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
+        <span className="flex items-start gap-3">
+          <ScreenIcon name="warning-amber" size={22} />
+          <span>
+            초안 · 정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
+          </span>
+        </span>
       </Notice>
       <Card>
-        <dl className="space-y-5">
+        <dl className="space-y-4">
           {items.map(([title, text]) => (
             <div key={title}>
-              <dt className="mb-2 font-bold">{title}</dt>
-              <dd className="text-[0.889rem] text-muted">{text}</dd>
+              <dt className="mb-1 text-[0.889rem] font-bold text-muted">
+                {title}
+              </dt>
+              <dd>{text}</dd>
             </div>
           ))}
         </dl>
       </Card>
-      <label className="flex min-h-[44px] cursor-pointer items-center gap-3">
+      <label className="flex min-h-[70px] cursor-pointer items-center gap-3 rounded-[16px] border border-control bg-surface px-[15px] py-[13px]">
         <input
           type="checkbox"
           checked={checked}
@@ -76,12 +84,19 @@ export function RecordConsentPage() {
         />
         <span className="font-semibold">[필수] 진료 기록 저장에 동의해요</span>
       </label>
-      <Button disabled={!checked} onClick={agree}>
-        동의하고 시작하기
-      </Button>
-      <ActionLink to="/" variant="quiet">
-        동의하지 않아요
-      </ActionLink>
+      <div className="flex flex-col gap-3">
+        <Button disabled={!checked} onClick={agree}>
+          동의하고 시작하기
+        </Button>
+        {!checked && (
+          <p className="text-center text-[0.889rem] text-muted">
+            동의에 체크해 주세요
+          </p>
+        )}
+        <ActionLink to="/" variant="outline">
+          동의하지 않아요
+        </ActionLink>
+      </div>
     </>
   );
 }

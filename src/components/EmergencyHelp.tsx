@@ -1,21 +1,19 @@
-import { Card } from "@/components/ui";
-
+import { DesignIcon } from "@/components/DesignIcon";
+import { ScreenIcon } from "@/components/ScreenElements";
 export function EmergencyHelp() {
   return (
-    <Card className="border-[#fecdca] bg-emergency-soft">
-      <h2 className="mb-2 font-bold text-emergency">
-        몸 상태가 갑자기 나빠졌나요?
-      </h2>
-      <p className="mb-4 text-[0.889rem] text-muted">
-        숨이 차거나, 의식이 흐려지는 등 위급한 증상이 있으면 바로 119에
-        전화하세요.
+    <div className="flex flex-col gap-3 rounded-[16px] bg-emergency-soft p-4">
+      <p className="flex items-start gap-[10px] text-[0.889rem] text-emergency-ink">
+        <ScreenIcon name="warning" size={22} />
+        <span>증상이 갑자기 심해지면 바로 119에 전화하세요.</span>
       </p>
       <a
         href="tel:119"
-        className="flex min-h-[max(44px,3.222rem)] items-center justify-center rounded-[12px] bg-emergency px-4 py-3 text-center font-bold text-white"
+        className="flex min-h-[max(44px,3.2rem)] items-center justify-center gap-[10px] rounded-[18px] border-2 border-emergency bg-surface px-4 py-3 text-center font-bold text-emergency"
       >
+        <DesignIcon name="phone" size={24} />
         119에 전화하기
       </a>
-    </Card>
+    </div>
   );
 }

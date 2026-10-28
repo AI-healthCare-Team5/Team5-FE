@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { InlineConfirm } from "@/components/InlineConfirm";
-import { SummaryDocument } from "@/components/summary/SummaryDocument";
+import { StoredSummary } from "@/pages/records/components/StoredSummary";
+import { formatRecordDate } from "@/pages/records/formatRecordDate";
 import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
 
@@ -26,40 +27,40 @@ export function RecordDetailPage() {
   }
   return (
     <>
-      <PageTitle description="저장된 기록은 읽기 전용이에요.">
-        진료 기록
-      </PageTitle>
-      <p className="text-[0.889rem] text-muted">
-        {new Date(record.createdAt).toLocaleDateString("ko-KR", {
-          timeZone: "Asia/Seoul",
-        })}
-      </p>
-      <div style={large ? { fontSize: "1.222rem" } : undefined}>
-        <SummaryDocument summary={record.summary} />
-      </div>
-      <Button
-        variant="outline"
-        aria-pressed={large}
-        onClick={() => setLarge((value) => !value)}
+      <PageTitle
+        description={`${formatRecordDate(record.createdAt)}에 만든 요약지예요. 진료실에서 그대로 보여 줄 수 있어요.`}
       >
-        {large ? "원래 크기로 보기" : "글자 크게 보기"}
-      </Button>
-      <Button variant="outline" onClick={() => setConfirming(true)}>
-        이 기록 지우기
-      </Button>
-      {confirming && (
-        <InlineConfirm
-          message="이 기록을 지울까요? 지운 기록은 되돌릴 수 없어요."
-          onCancel={() => setConfirming(false)}
-          onConfirm={() => {
-            appActions.deleteRecord(record.id);
-            navigate("/records", { replace: true });
-          }}
-        />
-      )}
-      <ActionLink to="/records" variant="quiet">
-        내 기록으로 돌아가기
-      </ActionLink>
+        저장된 요약지
+      </PageTitle>
+      <StoredSummary
+        summary={record.summary}
+        date={formatRecordDate(record.createdAt)}
+        large={large}
+      />
+      <div className="flex flex-col gap-3">
+        <Button
+          aria-pressed={large}
+          onClick={() => setLarge((value) => !value)}
+        >
+          글자 크게 보여주기
+        </Button>
+        <ActionLink to="/records" variant="outline">
+          내 기록으로 돌아가기
+        </ActionLink>
+        <Button variant="quiet" onClick={() => setConfirming(true)}>
+          이 기록 지우기
+        </Button>
+        {confirming && (
+          <InlineConfirm
+            message="이 기록을 지울까요? 지운 기록은 되돌릴 수 없어요."
+            onCancel={() => setConfirming(false)}
+            onConfirm={() => {
+              appActions.deleteRecord(record.id);
+              navigate("/records", { replace: true });
+            }}
+          />
+        )}
+      </div>
     </>
   );
 }

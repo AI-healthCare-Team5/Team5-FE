@@ -78,7 +78,7 @@ export function AppShell() {
       <main
         id="main"
         tabIndex={-1}
-        className={`flex flex-1 flex-col gap-6 px-6 pt-4 ${pathname === "/" ? "pb-10" : "pb-8"}`}
+        className="flex flex-1 flex-col gap-8 px-6 pt-4 pb-10"
       >
         <Outlet />
       </main>
