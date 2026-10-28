@@ -10,6 +10,7 @@ description: 진료한장 저장소에서 기능 작업을 이슈 생성부터 �
 ## 1. 이슈
 
 - 작업 전에 관련 이슈가 있는지 `gh issue list`로 확인합니다.
+- API를 연결하는 작업이면 AGENTS.md의 참고 문서에 있는 Notion API 목록을 먼저 확인하고, 이슈의 참고 문서에 링크를 넣습니다.
 - 없으면 `.github/ISSUE_TEMPLATE/issue.md` 형식으로 `gh issue create`를 실행합니다.
 - 제목은 `[fe] 요약`처럼 범위를 앞에 붙입니다.
 - 라벨(`--label`)과 담당자(`--assignee`)를 반드시 지정합니다. 값을 모르면 사용자에게 묻습니다.

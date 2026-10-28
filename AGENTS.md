@@ -30,6 +30,12 @@
 - PR에는 변경 요약, 확인한 항목, UI 변경 시 화면 캡처를 포함합니다. 적절한 라벨과 담당자, 리뷰어를 지정합니다.
 - 배포는 Cloudflare Pages Git 연동으로 관리하고, GitHub Actions는 format, lint, typecheck, test, build를 확인합니다. PR Preview 배포도 리뷰에 활용합니다.
 
+## 참고 문서
+
+- API 목록(Notion): https://app.notion.com/p/405169f76f9f804b8dd7e52aea15d932
+- 디자인(Figma 모바일 화면): https://www.figma.com/design/B8SyYNgeBYqoH2PbDTtN3E/?node-id=1-2
+- API를 연결하는 작업은 시작하기 전에 Notion API 목록을 먼저 확인합니다.
+
 ## 명령
 
 - 개발 서버: npm run dev
