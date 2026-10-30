@@ -91,6 +91,7 @@ Windows PowerShell에서 npm.ps1 실행 정책 오류가 나면 `npm.cmd ci`, `n
 ## 폴더 구성
 
 - `src/App.tsx`: 라우트 정의 (react-router)
+- `src/api`: API 공통 요청 함수, 응답·오류 타입, enum
 - `src/components`: 여러 화면에서 공유하는 컴포넌트
 - `src/pages`: 화면별 컴포넌트
 - `src/styles`: 글꼴, 기본 스타일, 디자인 토큰, 공통 유틸리티
