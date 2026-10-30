@@ -17,8 +17,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // preview.proxy는 기본값으로 이 설정을 함께 씁니다.
+      // Worker의 run_worker_first: ["/api/*"]와 같이 /api/로 시작하는 경로만 넘깁니다.
       proxy: {
-        "/api": {
+        "/api/": {
           target: env.API_ORIGIN || "http://localhost:8080",
           changeOrigin: true,
         },

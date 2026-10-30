@@ -39,7 +39,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Property 1: /api/* 요청은 백엔드로 전달된다", () => {
+describe("/api/* 요청은 백엔드로 전달한다", () => {
   const paths = [
     "/api/me",
     "/api/visits?page=2&sort=desc",
@@ -139,6 +139,43 @@ describe("Property 1: /api/* 요청은 백엔드로 전달된다", () => {
     expect(headers.get("x-forwarded-proto")).toBe("http");
   });
 
+  it("클라이언트가 보낸 X-Forwarded-For·X-Real-IP·Forwarded는 전달하지 않는다", async () => {
+    await handleRequest(
+      new Request(`${APP}/api/me`, {
+        headers: {
+          "cf-connecting-ip": "203.0.113.10",
+          "x-forwarded-for": "198.51.100.66",
+          "x-real-ip": "198.51.100.66",
+          forwarded: "for=198.51.100.66",
+        },
+      }),
+      makeEnv(API),
+    );
+
+    const headers = lastUpstream().headers;
+    expect(headers.get("x-forwarded-for")).toBe("203.0.113.10");
+    expect(headers.has("x-real-ip")).toBe(false);
+    expect(headers.has("forwarded")).toBe(false);
+  });
+
+  it("CF-Connecting-IP가 없으면 클라이언트가 보낸 IP 헤더를 모두 뺀다", async () => {
+    await handleRequest(
+      new Request("http://localhost:8787/api/me", {
+        headers: {
+          "x-forwarded-for": "198.51.100.66",
+          "x-real-ip": "198.51.100.66",
+          forwarded: "for=198.51.100.66",
+        },
+      }),
+      makeEnv(API),
+    );
+
+    const headers = lastUpstream().headers;
+    expect(headers.has("x-forwarded-for")).toBe(false);
+    expect(headers.has("x-real-ip")).toBe(false);
+    expect(headers.has("forwarded")).toBe(false);
+  });
+
   it("리다이렉트를 따라가지 않는다", async () => {
     await handleRequest(new Request(`${APP}/api/me`), makeEnv(API));
     expect(lastUpstream().redirect).toBe("manual");
@@ -186,7 +223,7 @@ describe("Property 1: /api/* 요청은 백엔드로 전달된다", () => {
   });
 });
 
-describe("Property 1 오류: 백엔드에 보낼 수 없으면 502 JSON을 돌려준다", () => {
+describe("백엔드에 보낼 수 없으면 502 JSON을 돌려준다", () => {
   const invalidOrigins = [
     undefined,
     "",
@@ -229,7 +266,7 @@ describe("Property 1 오류: 백엔드에 보낼 수 없으면 502 JSON을 돌�
   });
 });
 
-describe("Property 2: /api/가 아닌 요청은 정적 파일과 SPA fallback에 맡긴다", () => {
+describe("/api/가 아닌 요청은 정적 파일과 SPA fallback에 맡긴다", () => {
   const paths = [
     "/",
     "/visits/1",

@@ -22,6 +22,9 @@ const HOP_BY_HOP_HEADERS = [
   "host",
 ];
 
+// 클라이언트가 임의로 넣을 수 있어 그대로 넘기지 않는 IP 헤더입니다.
+const CLIENT_IP_HEADERS = ["x-forwarded-for", "x-real-ip", "forwarded"];
+
 // API_ORIGIN을 검사해 출처만 담은 URL을 돌려줍니다. 쓸 수 없는 값이면 null입니다.
 export function parseApiOrigin(value: string | undefined): URL | null {
   const trimmed = value?.trim();
@@ -71,6 +74,9 @@ export async function proxyToBackend(
 
   const headers = new Headers(request.headers);
   for (const name of HOP_BY_HOP_HEADERS) headers.delete(name);
+
+  // 클라이언트가 보낸 IP 헤더는 믿지 않고, Cloudflare가 확인한 값만 넘깁니다.
+  for (const name of CLIENT_IP_HEADERS) headers.delete(name);
 
   const clientIp = request.headers.get("cf-connecting-ip");
   if (clientIp) headers.set("x-forwarded-for", clientIp);
