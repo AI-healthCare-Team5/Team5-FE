@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearLoginIntent,
   getLoginDestination,
   readLoginIntent,
   saveLoginIntent,
-  takeLoginIntent,
 } from "@/stores/loginIntent";
 
 // 모든 값은 가짜 데이터입니다.
@@ -39,22 +39,18 @@ afterEach(() => {
 });
 
 describe("로그인 전 기억", () => {
-  it("저장한 내용을 꺼내면 지운다", () => {
+  it("읽기만 하면 지우지 않고, 지우면 기본값으로 돌아간다", () => {
     saveLoginIntent({ returnTo: "/summary", saveTarget });
 
-    expect(takeLoginIntent()).toEqual({ returnTo: "/summary", saveTarget });
-    expect(takeLoginIntent()).toEqual({
+    expect(readLoginIntent()).toEqual({ returnTo: "/summary", saveTarget });
+    expect(readLoginIntent()).toEqual({ returnTo: "/summary", saveTarget });
+
+    clearLoginIntent();
+
+    expect(readLoginIntent()).toEqual({
       returnTo: "/records",
       saveTarget: null,
     });
-  });
-
-  it("읽기만 하면 지우지 않는다", () => {
-    saveLoginIntent({ returnTo: "/my-info", saveTarget: null });
-
-    readLoginIntent();
-
-    expect(readLoginIntent().returnTo).toBe("/my-info");
   });
 
   it.each([
@@ -64,7 +60,7 @@ describe("로그인 전 기억", () => {
   ])("%s는 기본값으로 돌린다", (_, value) => {
     storage.setItem("jinryo:login-intent", JSON.stringify(value));
 
-    expect(takeLoginIntent()).toEqual({
+    expect(readLoginIntent()).toEqual({
       returnTo: "/records",
       saveTarget: null,
     });
@@ -73,7 +69,7 @@ describe("로그인 전 기억", () => {
   it("JSON이 아니면 기본값으로 돌린다", () => {
     storage.setItem("jinryo:login-intent", "{");
 
-    expect(takeLoginIntent().returnTo).toBe("/records");
+    expect(readLoginIntent().returnTo).toBe("/records");
   });
 
   it("sessionStorage를 쓸 수 없어도 기본값으로 동작한다", () => {
@@ -85,7 +81,7 @@ describe("로그인 전 기억", () => {
 
     saveLoginIntent({ returnTo: "/summary", saveTarget });
 
-    expect(takeLoginIntent().returnTo).toBe("/records");
+    expect(readLoginIntent().returnTo).toBe("/records");
   });
 });
 

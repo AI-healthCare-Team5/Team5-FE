@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getKakaoAuthorizeUrl, getKakaoRedirectUri } from "@/api/auth";
 import { DesignIcon } from "@/components/DesignIcon";
@@ -14,6 +14,16 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
   const navigate = useNavigate();
   const { returnTo, saveTarget } = useAppStore();
   const [pending, setPending] = useState(false);
+  // 카카오에서 뒤로 가기로 돌아오면 bfcache가 요청 중 상태 그대로 복원할 수 있어 풀어 줍니다.
+  useEffect(() => {
+    function reset(event: PageTransitionEvent) {
+      if (event.persisted) {
+        setPending(false);
+      }
+    }
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
   async function login() {
     if (pending) {
       return;
@@ -127,8 +137,8 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
               />
             </button>
             <p className="text-[0.889rem] text-muted">
-              닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록
-              저장 동의가 필요해요.
+              닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록 저장
+              동의가 필요해요.
             </p>
             <ActionLink to="/" variant="outline">
               로그인 없이 계속하기

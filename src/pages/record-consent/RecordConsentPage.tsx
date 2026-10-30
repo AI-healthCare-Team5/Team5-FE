@@ -58,9 +58,7 @@ export function RecordConsentPage() {
       <Notice tone="amber">
         <span className="flex items-start gap-3">
           <ScreenIcon name="warning-amber" size={22} />
-          <span>
-            정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
-          </span>
+          <span>정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.</span>
         </span>
       </Notice>
       <Card>

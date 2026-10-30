@@ -69,15 +69,13 @@ export function readLoginIntent(): LoginIntent {
   };
 }
 
-// 기억한 내용을 읽고 지웁니다.
-export function takeLoginIntent(): LoginIntent {
-  const intent = readLoginIntent();
+// 로그인에 성공하면 기억한 내용을 지웁니다.
+export function clearLoginIntent() {
   try {
     getStorage()?.removeItem(STORAGE_KEY);
   } catch {
     // 지우지 못해도 다음 로그인에서 덮어씁니다.
   }
-  return intent;
 }
 
 // 로그인 후 갈 화면입니다.

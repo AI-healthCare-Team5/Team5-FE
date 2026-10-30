@@ -1,43 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { getKakaoRedirectUri, loginWithKakao } from "@/api/auth";
 import { Spinner } from "@/components/ScreenElements";
 import { PageTitle } from "@/components/ui";
-import { appActions } from "@/stores/appStore";
-import {
-  getLoginDestination,
-  readLoginIntent,
-  takeLoginIntent,
-} from "@/stores/loginIntent";
-
-// 인가 코드는 한 번만 쓸 수 있어서, StrictMode에서 effect가 두 번 돌아도 요청은 한 번만 보냅니다.
-const pendingLogins = new Map<string, Promise<string>>();
-
-async function finishLogin(code: string, state: string): Promise<string> {
-  const intent = takeLoginIntent();
-  try {
-    const result = await loginWithKakao({
-      code,
-      state,
-      redirectUri: getKakaoRedirectUri(),
-    });
-    appActions.completeLogin(result, intent);
-    return getLoginDestination(intent, result.needsRecordConsent);
-  } catch (error) {
-    // L01a에서 다시 시도할 때 같은 화면으로 돌아오도록 되돌려 둡니다.
-    appActions.prepareLogin(intent.returnTo, intent.saveTarget);
-    throw error;
-  }
-}
-
-function loginOnce(code: string, state: string): Promise<string> {
-  let login = pendingLogins.get(code);
-  if (!login) {
-    login = finishLogin(code, state);
-    pendingLogins.set(code, login);
-  }
-  return login;
-}
+import { loginWithKakaoCallback } from "@/stores/kakaoLogin";
 
 export function KakaoCallbackPage() {
   const navigate = useNavigate();
@@ -48,15 +13,13 @@ export function KakaoCallbackPage() {
   const canceled = searchParams.has("error");
 
   useEffect(() => {
+    // 기억한 내용은 sessionStorage에 남아 있어서 L01a에서 다시 시도해도 이어집니다.
     if (canceled || !code || !state) {
-      // L01a에서 다시 시도할 때 같은 화면으로 돌아오도록 되돌려 둡니다.
-      const intent = readLoginIntent();
-      appActions.prepareLogin(intent.returnTo, intent.saveTarget);
       navigate("/login/failed", { replace: true });
       return;
     }
     let active = true;
-    loginOnce(code, state)
+    loginWithKakaoCallback(code, state)
       .then((destination) => {
         if (active) navigate(destination, { replace: true });
       })
