@@ -1,3 +1,5 @@
+import { UNCHECKED_TEXT } from "@/api/values";
+
 export const questionKeys = [
   "age",
   "gender",
@@ -32,7 +34,7 @@ export interface SavedRecord {
 }
 
 export function createSummary(interview: Interview): SummaryData {
-  const unknown = "확인 못 했어요";
+  const unknown = UNCHECKED_TEXT;
   return {
     age: interview.age ?? unknown,
     gender: interview.gender ?? unknown,
