@@ -66,7 +66,7 @@ Docs: 개발 안내 보완
 - UI가 바뀌면 변경 전후를 확인할 수 있는 화면 캡처를 첨부합니다.
 - 담당자와 리뷰어를 지정하고, 최소 한 명의 리뷰 승인을 받은 뒤 병합합니다.
 - GitHub Actions의 format, lint, typecheck, test, build 검사가 모두 통과해야 합니다.
-- Cloudflare Pages Preview에서 배포 화면과 주요 경로를 확인하고 PR에 결과를 남깁니다.
+- Cloudflare Workers 미리보기 URL에서 배포 화면과 주요 경로를 확인하고 PR에 결과를 남깁니다.
 
 ## 보안과 데이터
 
