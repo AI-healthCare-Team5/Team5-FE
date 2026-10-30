@@ -3,7 +3,7 @@ import { ActionLink, Button, Chip, Progress } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
 import { interviewQuestions } from "@/stores/interviewQuestions";
 
-// 증상 부위는 앞 화면에서 받았으므로 부기·넘어짐 질문은 묻지 않습니다.
+// S04a는 S03의 질문 1·2·5·6·7을 같은 문항과 선택지로 묻습니다.
 const textQuestions = interviewQuestions.filter(
   (question) => question.key !== "swelling" && question.key !== "fall",
 );
