@@ -1,6 +1,6 @@
 import { DesignIcon } from "@/components/DesignIcon";
 import { ScreenIcon } from "@/components/ScreenElements";
-import type { Hospital } from "@/pages/hospitals/sampleHospitals";
+import type { Hospital } from "@/pages/hospitals/types";
 
 export function HospitalCard({
   hospital,
@@ -33,7 +33,7 @@ export function HospitalCard({
         <span className="flex min-w-0 flex-col">
           <span className="text-[1.111rem] font-bold">{hospital.name}</span>
           <span className="text-[0.889rem] text-muted">
-            {hospital.department} · {hospital.distance}
+            {hospital.department} · {hospital.distanceKm.toFixed(1)}km
           </span>
         </span>
       </button>
@@ -51,7 +51,8 @@ export function HospitalCard({
         />
         {hospital.hours}
       </p>
-      <div className="grid grid-cols-2 gap-[10px]">
+      {/* 큰 글자나 좁은 화면에서 두 버튼이 한 줄에 안 들어가면 위아래로 쌓습니다. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-[10px]">
         <a
           href={`tel:${hospital.phone}`}
           aria-label={`${hospital.name} 전화`}
@@ -64,7 +65,7 @@ export function HospitalCard({
           href={directionsUrl}
           target="_blank"
           rel="noreferrer"
-          aria-label={`${hospital.name} 길 찾기`}
+          aria-label={`${hospital.name} 길 찾기 (새 창)`}
           className="flex min-h-[max(44px,3rem)] items-center justify-center gap-[6px] rounded-[14px] border-2 border-brand bg-surface px-[8px] font-bold whitespace-nowrap text-brand-strong"
         >
           <ScreenIcon name="navigation" size={20} />길 찾기
