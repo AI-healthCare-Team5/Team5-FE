@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router";
 import { ActionLink, Button, Chip, Progress } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
 import { interviewQuestions } from "@/stores/interviewQuestions";
@@ -10,17 +11,27 @@ const textQuestions = interviewQuestions.filter(
 
 export function TextInputQuestionsPage() {
   const { interview } = useAppStore();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const total = textQuestions.length;
   const complete = step === total;
   const question = textQuestions[Math.min(step, total - 1)];
+  // 같은 답("없어요")이 여러 문항에 나올 수 있어 문항 key로 구분합니다.
   const answers = [
-    interview.symptom,
-    interview.duration,
-    ...textQuestions.map((item) => interview[item.key]),
+    { key: "symptom", value: interview.symptom },
+    { key: "duration", value: interview.duration },
+    ...textQuestions.map((item) => ({
+      key: item.key,
+      value: interview[item.key],
+    })),
   ].filter(
-    (value): value is string => Boolean(value) && value !== "잘 모르겠어요",
+    (answer): answer is { key: string; value: string } =>
+      Boolean(answer.value) && answer.value !== "잘 모르겠어요",
   );
+  // 새로고침이나 주소로 바로 들어와 S04 답이 없으면 S04부터 다시 시작합니다.
+  if (!interview.symptom || !interview.duration) {
+    return <Navigate to="/text-input" replace />;
+  }
   return (
     <>
       <Progress
@@ -34,9 +45,9 @@ export function TextInputQuestionsPage() {
             지금까지 알려주신 내용
           </p>
           <ul className="flex flex-wrap gap-2">
-            {answers.map((value) => (
+            {answers.map(({ key, value }) => (
               <li
-                key={value}
+                key={key}
                 className="rounded-full bg-brand-soft px-[14px] py-[6px] text-[0.889rem] font-medium text-brand-strong"
               >
                 {value}
@@ -93,8 +104,9 @@ export function TextInputQuestionsPage() {
       </div>
       <Button
         variant="quiet"
-        disabled={step === 0}
-        onClick={() => setStep((value) => Math.max(0, value - 1))}
+        onClick={() =>
+          step === 0 ? navigate("/text-input") : setStep((value) => value - 1)
+        }
       >
         ← 이전 질문
       </Button>
