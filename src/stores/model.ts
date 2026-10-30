@@ -9,7 +9,7 @@ export const questionKeys = [
 ] as const;
 export type QuestionKey = (typeof questionKeys)[number];
 export type Interview = Partial<
-  Record<QuestionKey | "symptom" | "duration", string>
+  Record<QuestionKey | "symptom" | "duration" | "detail", string>
 >;
 
 export interface SummaryData {

@@ -22,7 +22,9 @@ export function InterviewPage() {
           </p>
           <ul className="flex flex-wrap gap-2">
             {Object.entries(interview)
-              .filter(([, value]) => value !== "잘 모르겠어요")
+              .filter(
+                ([key, value]) => key !== "detail" && value !== "잘 모르겠어요",
+              )
               .map(([key, value]) => (
                 <li
                   key={key}
