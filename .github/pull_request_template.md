@@ -13,7 +13,7 @@ Closes #
 ## 확인 방법
 
 - [ ] `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` 통과
-- [ ] Cloudflare Pages Preview에서 변경된 화면과 주요 경로 확인
+- [ ] Cloudflare Workers 미리보기 URL에서 변경된 화면과 주요 경로 확인
 - 직접 확인한 시나리오:
 
 ## 스크린샷

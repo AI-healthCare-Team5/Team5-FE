@@ -1,17 +1,32 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
+export default defineConfig(({ mode }) => {
+  // VITE_ 접두사가 없는 값은 이 설정 파일에서만 읽고 브라우저 번들에는 넣지 않습니다.
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("./src", import.meta.url)),
+      },
     },
-  },
-  test: {
-    passWithNoTests: true,
-  },
+    server: {
+      // preview.proxy는 기본값으로 이 설정을 함께 씁니다.
+      // Worker의 run_worker_first: ["/api/*"]와 같이 /api/로 시작하는 경로만 넘깁니다.
+      proxy: {
+        "/api/": {
+          target: env.API_ORIGIN || "http://localhost:8080",
+          changeOrigin: true,
+        },
+      },
+    },
+    test: {
+      passWithNoTests: true,
+    },
+  };
 });

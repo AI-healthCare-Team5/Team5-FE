@@ -8,5 +8,5 @@ inclusion: always
 
 - React, TypeScript, Vite, Tailwind CSS 4, npm을 사용합니다.
 - CI는 GitHub Actions에서 format, lint, typecheck, test, build를 실행합니다.
-- 배포는 Cloudflare Pages Git 연동으로 관리합니다.
+- 배포는 Cloudflare Workers Builds Git 연동(`npm run build` 후 `npx wrangler deploy`)으로 관리하며, `/api/*`는 `worker/index.ts`가 `API_ORIGIN` 백엔드로 프록시합니다.
 - 화면과 제품 동작은 요구사항이 정해진 범위에서 구현합니다.

@@ -9,6 +9,7 @@ dist/
 
 # Cloudflare
 .wrangler/
+.dev.vars*
 
 # Local environment files
 .env
