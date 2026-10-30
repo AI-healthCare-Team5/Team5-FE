@@ -106,11 +106,6 @@ export function TextInputPage() {
         >
           다음
         </Button>
-        {!ready && (
-          <p className="text-center text-[0.889rem] text-muted">
-            불편한 곳과 기간을 골라 주세요
-          </p>
-        )}
         <ActionLink to="/interview" variant="outline">
           <DesignIcon name="microphone" size={20} />
           말로 다시 해 볼게요
