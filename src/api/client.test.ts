@@ -120,10 +120,20 @@ describe("요청", () => {
   it.each(["intakes", "/api/intakes"])(
     "잘못된 경로 %s는 막는다",
     async (path) => {
-      await expect(apiRequest(path)).rejects.toThrow();
+      await expect(apiRequest(path)).rejects.toThrow("API 경로");
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
+
+  it("본문을 JSON으로 바꾸지 못하면 NETWORK_ERROR로 바꾸지 않는다", async () => {
+    const body: Record<string, unknown> = {};
+    body.self = body;
+
+    const promise = apiRequest("/intakes", { method: "POST", body });
+
+    await expect(promise).rejects.toBeInstanceOf(TypeError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("응답 파싱과 오류", () => {
@@ -210,16 +220,21 @@ describe("응답 파싱과 오류", () => {
     expect(getErrorMessage(error)).toBe(SERVER_ERROR_MESSAGE);
   });
 
-  it("JSON이 아닌 응답도 INVALID_RESPONSE로 던진다", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response("<!doctype html>", { status: 200 }),
-    );
+  it.each([200, 403, 429])(
+    "JSON이 아닌 %d 응답도 INVALID_RESPONSE이고 서버 오류로 본다",
+    async (status) => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("<!doctype html>", { status }),
+      );
 
-    const error = await catchError(apiRequest("/regions"));
+      const error = await catchError(apiRequest("/regions"));
 
-    expect(error.code).toBe(INVALID_RESPONSE);
-    expect(isServerError(error)).toBe(false);
-  });
+      expect(error.code).toBe(INVALID_RESPONSE);
+      expect(error.status).toBe(status);
+      expect(isServerError(error)).toBe(true);
+      expect(getErrorMessage(error)).toBe(SERVER_ERROR_MESSAGE);
+    },
+  );
 
   it("네트워크 오류는 NETWORK_ERROR로 던진다", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
@@ -241,6 +256,35 @@ describe("응답 파싱과 오류", () => {
     ).rejects.toMatchObject({
       name: "AbortError",
     });
+  });
+
+  it("본문을 읽는 중에 취소하면 ApiError로 바꾸지 않는다", async () => {
+    const controller = new AbortController();
+    const response = new Response("{}", { status: 200 });
+    vi.spyOn(response, "text").mockImplementation(() => {
+      controller.abort();
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    });
+    fetchMock.mockResolvedValueOnce(response);
+
+    await expect(
+      apiRequest("/regions", { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  });
+
+  it("본문을 읽는 중에 연결이 끊기면 NETWORK_ERROR로 던진다", async () => {
+    const response = new Response("{}", { status: 200 });
+    vi.spyOn(response, "text").mockRejectedValue(
+      new TypeError("network error"),
+    );
+    fetchMock.mockResolvedValueOnce(response);
+
+    const error = await catchError(apiRequest("/regions"));
+
+    expect(error.code).toBe(NETWORK_ERROR);
+    expect(error.status).toBe(0);
   });
 
   it.each([
@@ -360,6 +404,34 @@ describe("AUTH_401 재시도", () => {
     expect(error.code).toBe("AUTH_401");
     expect(listener).toHaveBeenCalledTimes(1);
     expect(calledUrls()).toEqual(["/api/members/me", "/api/auth/refresh"]);
+  });
+
+  it("동시에 여러 요청이 refresh까지 AUTH_401이면 비로그인 알림은 한 번만 보낸다", async () => {
+    const listener = vi.fn();
+    const unsubscribe = onUnauthenticated(listener);
+    fetchMock.mockImplementation(async (url) => {
+      if (url === "/api/auth/refresh") {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return authExpired();
+    });
+
+    const results = await Promise.allSettled([
+      apiRequest("/members/me"),
+      apiRequest("/members/me/summaries"),
+      apiRequest("/regions"),
+    ]);
+    unsubscribe();
+
+    expect(results.map((result) => result.status)).toEqual([
+      "rejected",
+      "rejected",
+      "rejected",
+    ]);
+    expect(
+      calledUrls().filter((url) => url === "/api/auth/refresh"),
+    ).toHaveLength(1);
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("다시 보낸 요청도 AUTH_401이면 더 재시도하지 않고 비로그인 상태를 알린다", async () => {

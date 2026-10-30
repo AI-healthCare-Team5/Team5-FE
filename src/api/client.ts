@@ -7,6 +7,7 @@ const REFRESH_PATH = "/auth/refresh";
 
 // 백엔드 없이 가짜 데이터로 화면을 확인할 때 VITE_API_MOCK=true로 둡니다.
 // 각 도메인 API 함수가 이 값을 보고 가짜 응답을 돌려줍니다.
+// 빌드할 때 번들에 들어가므로 로컬 .env.local에만 두고 Workers Builds 빌드 변수에는 등록하지 않습니다.
 export const isMockApi = import.meta.env.VITE_API_MOCK === "true";
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -21,6 +22,7 @@ export interface ApiRequestOptions {
 }
 
 // refresh도 AUTH_401이면 비로그인 상태가 되었다고 알립니다.
+// 다시 보낸 요청이 또 AUTH_401인 경우는 요청마다 알리므로, 리스너는 여러 번 불려도 괜찮게 만듭니다.
 const unauthenticatedListeners = new Set<() => void>();
 
 export function onUnauthenticated(listener: () => void): () => void {
@@ -63,12 +65,16 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (hasBody) headers["content-type"] = "application/json";
 
+  // 경로·본문 오류는 개발자 실수이므로 NETWORK_ERROR로 바꾸지 않고 그대로 던집니다.
+  const url = buildUrl(path, options.query);
+  const payload = hasBody ? JSON.stringify(options.body) : undefined;
+
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, options.query), {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       headers,
-      body: hasBody ? JSON.stringify(options.body) : undefined,
+      body: payload,
       // 같은 출처라 기본값으로도 쿠키가 실리지만, 이슈 #75 기준대로 명시합니다.
       credentials: "include",
       signal: options.signal,
@@ -79,9 +85,18 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
     throw new ApiError(NETWORK_ERROR, "", 0);
   }
 
+  // 본문을 받는 중에 취소되거나 연결이 끊긴 경우도 fetch 단계와 같이 처리합니다.
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    throw new ApiError(NETWORK_ERROR, "", 0);
+  }
+
   let body: unknown;
   try {
-    body = JSON.parse(await response.text());
+    body = JSON.parse(text);
   } catch {
     body = null;
   }
@@ -96,12 +111,16 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
   return body.result as T;
 }
 
-// 동시에 여러 요청이 401을 받아도 refresh는 한 번만 부릅니다.
+// 동시에 여러 요청이 401을 받아도 refresh와 비로그인 알림은 한 번만 합니다.
 let refreshing: Promise<void> | null = null;
 
 function refreshOnce(): Promise<void> {
   refreshing ??= send<unknown>(REFRESH_PATH, { method: "POST" })
     .then(() => undefined)
+    .catch((error: unknown) => {
+      if (isAuthExpired(error)) notifyUnauthenticated();
+      throw error;
+    })
     .finally(() => {
       refreshing = null;
     });
@@ -126,10 +145,7 @@ export async function apiRequest<T>(
     try {
       await refreshOnce();
     } catch (refreshError) {
-      if (isAuthExpired(refreshError)) {
-        notifyUnauthenticated();
-        throw error;
-      }
+      if (isAuthExpired(refreshError)) throw error;
       throw refreshError;
     }
 

@@ -40,11 +40,14 @@ function codeStatus(code: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-// {도메인}_500, 응답을 받지 못한 경우, 형식이 맞지 않는 5xx 응답입니다.
+// {도메인}_500, 응답을 받지 못한 경우, 공통 형식이 아닌 응답입니다.
+// 형식이 맞지 않는 응답(프록시 502, SPA의 index.html, 앞단의 HTML 403·429 등)은
+// 상태와 관계없이 사용자가 할 수 있는 일이 같으므로 서버 오류로 묶습니다.
 export function isServerError(error: unknown): boolean {
   if (!isApiError(error)) return false;
-  if (error.code === NETWORK_ERROR) return true;
-  if (error.code === INVALID_RESPONSE) return error.status >= 500;
+  if (error.code === NETWORK_ERROR || error.code === INVALID_RESPONSE) {
+    return true;
+  }
   return codeStatus(error.code) === 500;
 }
 
