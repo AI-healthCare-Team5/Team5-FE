@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { createSampleRecords } from "@/stores/fixtures";
+import type { LoginIntent, SaveTarget } from "@/stores/loginIntent";
 import {
   createSummary,
   type Interview,
@@ -13,6 +14,8 @@ interface AppState {
   recordConsent: boolean;
   records: SavedRecord[];
   returnTo: string;
+  // "로그인하고 보관하기"로 로그인한 경우 보관할 요약지입니다.
+  saveTarget: SaveTarget | null;
 }
 
 const initialState: AppState = {
@@ -22,6 +25,7 @@ const initialState: AppState = {
   recordConsent: false,
   records: [],
   returnTo: "/records",
+  saveTarget: null,
 };
 
 let state: AppState = initialState;
@@ -50,13 +54,21 @@ export const appActions = {
   startInterview() {
     update({ interview: { ...initialState.interview } });
   },
-  prepareLogin(returnTo = "/records") {
-    update({ returnTo });
+  prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
+    update({ returnTo, saveTarget });
   },
-  loginDemo() {
+  // 카카오 로그인 응답으로 로그인 상태를 바꿉니다. 기록 목록은 기록 API 연결 전까지 예시 데이터입니다.
+  completeLogin(
+    result: { nickname: string | null; needsRecordConsent: boolean },
+    intent: LoginIntent,
+  ) {
     update({
       loggedIn: true,
+      nickname: result.nickname ?? "",
+      recordConsent: !result.needsRecordConsent,
       records: state.loggedIn ? state.records : createSampleRecords(),
+      returnTo: intent.returnTo,
+      saveTarget: intent.saveTarget,
     });
   },
   agreeToRecords() {
@@ -90,6 +102,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      saveTarget: null,
     });
   },
   withdraw() {
@@ -98,6 +111,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      saveTarget: null,
     });
   },
 };

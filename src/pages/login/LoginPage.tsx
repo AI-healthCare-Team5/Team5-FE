@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
+import { getKakaoAuthorizeUrl, getKakaoRedirectUri } from "@/api/auth";
 import { DesignIcon } from "@/components/DesignIcon";
 import {
   Illustration,
@@ -6,13 +8,27 @@ import {
   ScreenIcon,
 } from "@/components/ScreenElements";
 import { ActionLink, Card, Notice, PageTitle } from "@/components/ui";
-import { appActions, useAppStore } from "@/stores/appStore";
+import { useAppStore } from "@/stores/appStore";
+import { saveLoginIntent } from "@/stores/loginIntent";
 export function LoginPage({ failed = false }: { failed?: boolean }) {
   const navigate = useNavigate();
-  const { recordConsent, returnTo } = useAppStore();
-  function login() {
-    appActions.loginDemo();
-    navigate(recordConsent ? returnTo : "/record-consent");
+  const { returnTo, saveTarget } = useAppStore();
+  const [pending, setPending] = useState(false);
+  async function login() {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    saveLoginIntent({ returnTo, saveTarget });
+    try {
+      const { authorizeUrl } = await getKakaoAuthorizeUrl(
+        getKakaoRedirectUri(),
+      );
+      window.location.assign(authorizeUrl);
+    } catch {
+      setPending(false);
+      navigate("/login/failed");
+    }
   }
   return (
     <>
@@ -99,8 +115,10 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
             <button
               type="button"
               aria-label="카카오 로그인"
+              aria-busy={pending}
+              disabled={pending}
               onClick={login}
-              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center overflow-hidden rounded-[12px] bg-kakao"
+              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center overflow-hidden rounded-[12px] bg-kakao disabled:cursor-wait disabled:opacity-60"
             >
               <img
                 src="/images/kakao-login.svg"
