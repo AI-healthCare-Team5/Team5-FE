@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { getKakaoAuthorizeUrl, getKakaoRedirectUri } from "@/api/auth";
 import { DesignIcon } from "@/components/DesignIcon";
 import {
   Illustration,
@@ -6,13 +8,37 @@ import {
   ScreenIcon,
 } from "@/components/ScreenElements";
 import { ActionLink, Card, Notice, PageTitle } from "@/components/ui";
-import { appActions, useAppStore } from "@/stores/appStore";
+import { useAppStore } from "@/stores/appStore";
+import { saveLoginIntent } from "@/stores/loginIntent";
 export function LoginPage({ failed = false }: { failed?: boolean }) {
   const navigate = useNavigate();
-  const { recordConsent, returnTo } = useAppStore();
-  function login() {
-    appActions.loginDemo();
-    navigate(recordConsent ? returnTo : "/record-consent");
+  const { returnTo, saveTarget } = useAppStore();
+  const [pending, setPending] = useState(false);
+  // 카카오에서 뒤로 가기로 돌아오면 bfcache가 요청 중 상태 그대로 복원할 수 있어 풀어 줍니다.
+  useEffect(() => {
+    function reset(event: PageTransitionEvent) {
+      if (event.persisted) {
+        setPending(false);
+      }
+    }
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
+  async function login() {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    saveLoginIntent({ returnTo, saveTarget });
+    try {
+      const { authorizeUrl } = await getKakaoAuthorizeUrl(
+        getKakaoRedirectUri(),
+      );
+      window.location.assign(authorizeUrl);
+    } catch {
+      setPending(false);
+      navigate("/login/failed");
+    }
   }
   return (
     <>
@@ -99,8 +125,10 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
             <button
               type="button"
               aria-label="카카오 로그인"
+              aria-busy={pending}
+              disabled={pending}
               onClick={login}
-              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center overflow-hidden rounded-[12px] bg-kakao"
+              className="flex min-h-[max(44px,3.4rem)] w-full items-center justify-center overflow-hidden rounded-[12px] bg-kakao disabled:cursor-wait disabled:opacity-60"
             >
               <img
                 src="/images/kakao-login.svg"
@@ -109,8 +137,8 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
               />
             </button>
             <p className="text-[0.889rem] text-muted">
-              초안 · 닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록
-              저장 동의가 필요해요.
+              닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록 저장
+              동의가 필요해요.
             </p>
             <ActionLink to="/" variant="outline">
               로그인 없이 계속하기

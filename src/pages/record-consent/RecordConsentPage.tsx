@@ -15,7 +15,7 @@ const items = [
   ],
   [
     "어디에, 얼마나 저장하나요?",
-    "저장 위치와 보관 기간은 정책이 확정되면 이곳에 안내해요.",
+    "진료한장 서버에 암호화해서 저장하고, 직접 지우거나 탈퇴하면 30일 안에 완전히 지워요.",
   ],
   [
     "동의하지 않으면요?",
@@ -58,9 +58,7 @@ export function RecordConsentPage() {
       <Notice tone="amber">
         <span className="flex items-start gap-3">
           <ScreenIcon name="warning-amber" size={22} />
-          <span>
-            초안 · 정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
-          </span>
+          <span>정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.</span>
         </span>
       </Notice>
       <Card>

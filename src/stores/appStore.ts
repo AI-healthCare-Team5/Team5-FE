@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from "react";
+import { isMockApi } from "@/api/client";
 import { createSampleRecords } from "@/stores/fixtures";
+import {
+  readLoginIntent,
+  type LoginIntent,
+  type SaveTarget,
+} from "@/stores/loginIntent";
 import {
   createSummary,
   type Interview,
@@ -13,7 +19,12 @@ interface AppState {
   recordConsent: boolean;
   records: SavedRecord[];
   returnTo: string;
+  // "로그인하고 보관하기"로 로그인한 경우 보관할 요약지입니다.
+  saveTarget: SaveTarget | null;
 }
+
+// 카카오를 다녀오거나 새로고침해도 로그인 전에 기억한 내용으로 이어집니다.
+const loginIntent = readLoginIntent();
 
 const initialState: AppState = {
   interview: {},
@@ -21,7 +32,8 @@ const initialState: AppState = {
   nickname: "봄날",
   recordConsent: false,
   records: [],
-  returnTo: "/records",
+  returnTo: loginIntent.returnTo,
+  saveTarget: loginIntent.saveTarget,
 };
 
 let state: AppState = initialState;
@@ -50,13 +62,26 @@ export const appActions = {
   startInterview() {
     update({ interview: { ...initialState.interview } });
   },
-  prepareLogin(returnTo = "/records") {
-    update({ returnTo });
+  prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
+    update({ returnTo, saveTarget });
   },
-  loginDemo() {
+  // 카카오 로그인 응답으로 로그인 상태를 바꿉니다.
+  // 예시 기록은 가짜 응답(VITE_API_MOCK)에서만 넣고, 실제 로그인에서는 기록 API 연결 전까지 비워 둡니다.
+  completeLogin(
+    result: { nickname: string | null; needsRecordConsent: boolean },
+    intent: LoginIntent,
+  ) {
     update({
       loggedIn: true,
-      records: state.loggedIn ? state.records : createSampleRecords(),
+      nickname: result.nickname ?? "",
+      recordConsent: !result.needsRecordConsent,
+      records: state.loggedIn
+        ? state.records
+        : isMockApi
+          ? createSampleRecords()
+          : [],
+      returnTo: intent.returnTo,
+      saveTarget: intent.saveTarget,
     });
   },
   agreeToRecords() {
@@ -90,6 +115,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      saveTarget: null,
     });
   },
   withdraw() {
@@ -98,6 +124,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      saveTarget: null,
     });
   },
 };
