@@ -127,7 +127,7 @@ export function LoginPage({ failed = false }: { failed?: boolean }) {
               />
             </button>
             <p className="text-[0.889rem] text-muted">
-              초안 · 닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록
+              닉네임 제공 범위는 정책 확정 후 안내해요. 처음 한 번은 기록
               저장 동의가 필요해요.
             </p>
             <ActionLink to="/" variant="outline">

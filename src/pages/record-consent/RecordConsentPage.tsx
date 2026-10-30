@@ -59,7 +59,7 @@ export function RecordConsentPage() {
         <span className="flex items-start gap-3">
           <ScreenIcon name="warning-amber" size={22} />
           <span>
-            초안 · 정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
+            정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
           </span>
         </span>
       </Notice>
