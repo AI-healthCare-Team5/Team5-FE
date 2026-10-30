@@ -13,6 +13,8 @@ interface AppState {
   recordConsent: boolean;
   records: SavedRecord[];
   returnTo: string;
+  // 지금 요약지를 내 기록에 보관했는지. 로그인·동의를 거쳐 S06으로 돌아와도 유지합니다.
+  summarySaved: boolean;
 }
 
 const initialState: AppState = {
@@ -22,6 +24,7 @@ const initialState: AppState = {
   recordConsent: false,
   records: [],
   returnTo: "/records",
+  summarySaved: false,
 };
 
 let state: AppState = initialState;
@@ -48,7 +51,7 @@ export const appActions = {
     update({ interview: { ...state.interview, [key]: value } });
   },
   startInterview() {
-    update({ interview: { ...initialState.interview } });
+    update({ interview: { ...initialState.interview }, summarySaved: false });
   },
   prepareLogin(returnTo = "/records") {
     update({ returnTo });
@@ -74,7 +77,7 @@ export const appActions = {
       createdAt: new Date().toISOString(),
       summary: createSummary(state.interview),
     };
-    update({ records: [record, ...state.records] });
+    update({ records: [record, ...state.records], summarySaved: true });
   },
   deleteRecord(id: string) {
     const records = state.records.filter((record) => record.id !== id);
@@ -90,6 +93,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      summarySaved: false,
     });
   },
   withdraw() {
@@ -98,6 +102,7 @@ export const appActions = {
       recordConsent: false,
       records: [],
       returnTo: "/records",
+      summarySaved: false,
     });
   },
 };
