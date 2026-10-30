@@ -24,6 +24,13 @@ export default defineConfig(
     extends: [reactRefresh.configs.vite()],
   },
   {
+    files: ["worker/**/*.ts"],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
+  {
     files: ["*.{js,ts}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
