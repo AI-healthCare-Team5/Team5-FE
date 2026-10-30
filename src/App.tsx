@@ -8,6 +8,7 @@ import { LocationPage } from "@/pages/location/LocationPage";
 import { HospitalEmptyPage } from "@/pages/hospital-empty/HospitalEmptyPage";
 import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
 import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
+import { SummaryPage } from "@/pages/summary/SummaryPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
 import { LoginPage } from "@/pages/login/LoginPage";
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       { path: "/hospital-empty", element: <HospitalEmptyPage /> },
       { path: "/hospital-error", element: <HospitalErrorPage /> },
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
+      { path: "/summary", element: <SummaryPage /> },
       { path: "/emergency", element: <EmergencyPage /> },
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },
