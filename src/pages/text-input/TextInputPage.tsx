@@ -92,6 +92,7 @@ export function TextInputPage() {
           value={interview.detail ?? ""}
           onChange={(event) => appActions.answer("detail", event.target.value)}
           placeholder="예) 계단을 오를 때 더 아파요"
+          maxLength={200}
           rows={4}
           className="min-h-[7rem] w-full resize-y rounded-[16px] border border-control bg-surface px-4 py-3 placeholder:text-subtle"
         />
