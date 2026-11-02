@@ -14,6 +14,8 @@ import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
 import { LoginPage } from "@/pages/login/LoginPage";
+import { KakaoCallbackPage } from "@/pages/kakao-callback/KakaoCallbackPage";
+import { KAKAO_CALLBACK_PATH } from "@/api/auth";
 import { RecordConsentPage } from "@/pages/record-consent/RecordConsentPage";
 import { RecordsPage } from "@/pages/records/RecordsPage";
 import { RecordDetailPage } from "@/pages/records/RecordDetailPage";
@@ -38,6 +40,7 @@ const router = createBrowserRouter([
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/login/failed", element: <LoginPage failed /> },
+      { path: KAKAO_CALLBACK_PATH, element: <KakaoCallbackPage /> },
       { path: "/record-consent", element: <RecordConsentPage /> },
       { path: "/records", element: <RecordsPage /> },
       { path: "/records/:id", element: <RecordDetailPage /> },
