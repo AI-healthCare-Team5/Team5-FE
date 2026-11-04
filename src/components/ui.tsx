@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Link } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
 
@@ -19,7 +19,7 @@ export function Button({
   variant = "primary",
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: ComponentProps<"button"> & { variant?: Variant }) {
   return (
     <button
       className={`${buttonClass(variant)} ${className}`}
