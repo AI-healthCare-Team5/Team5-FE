@@ -44,6 +44,7 @@ export function StartPage() {
         </p>
         <Link
           to="/text-input"
+          onClick={appActions.startInterview}
           className="flex min-h-[54px] items-center justify-center gap-[10px] rounded-[18px] border border-control bg-surface px-7 py-3 font-bold text-brand-strong"
         >
           <img

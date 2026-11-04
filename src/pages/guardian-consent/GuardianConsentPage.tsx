@@ -37,7 +37,7 @@ export function GuardianConsentPage() {
         저장 동의
       </PageTitle>
       <Notice tone="amber">
-        초안 · 정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
+        정책이 정해지기 전의 문구예요. 검토 후 바뀔 수 있어요.
       </Notice>
       <Card>
         <dl className="space-y-5">

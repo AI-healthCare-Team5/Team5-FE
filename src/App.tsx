@@ -4,7 +4,10 @@ import { NotFoundPage } from "@/pages/not-found/NotFoundPage";
 import { AppShell } from "@/components/layout/AppShell";
 import { MicGuidePage } from "@/pages/mic-guide/MicGuidePage";
 import { InterviewPage } from "@/pages/interview/InterviewPage";
+import { TextInputPage } from "@/pages/text-input/TextInputPage";
+import { TextInputQuestionsPage } from "@/pages/text-input/TextInputQuestionsPage";
 import { LocationPage } from "@/pages/location/LocationPage";
+import { HospitalsPage } from "@/pages/hospitals/HospitalsPage";
 import { HospitalEmptyPage } from "@/pages/hospital-empty/HospitalEmptyPage";
 import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
 import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
@@ -12,6 +15,8 @@ import { SummaryPage } from "@/pages/summary/SummaryPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
 import { LoginPage } from "@/pages/login/LoginPage";
+import { KakaoCallbackPage } from "@/pages/kakao-callback/KakaoCallbackPage";
+import { KAKAO_CALLBACK_PATH } from "@/api/auth";
 import { RecordConsentPage } from "@/pages/record-consent/RecordConsentPage";
 import { RecordsPage } from "@/pages/records/RecordsPage";
 import { RecordDetailPage } from "@/pages/records/RecordDetailPage";
@@ -25,7 +30,10 @@ const router = createBrowserRouter([
       { path: "/mic-guide", element: <MicGuidePage /> },
       { path: "/mic-guide/unavailable", element: <MicGuidePage unavailable /> },
       { path: "/interview", element: <InterviewPage /> },
+      { path: "/text-input", element: <TextInputPage /> },
+      { path: "/text-input/questions", element: <TextInputQuestionsPage /> },
       { path: "/location", element: <LocationPage /> },
+      { path: "/hospitals", element: <HospitalsPage /> },
       { path: "/hospital-empty", element: <HospitalEmptyPage /> },
       { path: "/hospital-error", element: <HospitalErrorPage /> },
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
@@ -34,6 +42,7 @@ const router = createBrowserRouter([
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/login/failed", element: <LoginPage failed /> },
+      { path: KAKAO_CALLBACK_PATH, element: <KakaoCallbackPage /> },
       { path: "/record-consent", element: <RecordConsentPage /> },
       { path: "/records", element: <RecordsPage /> },
       { path: "/records/:id", element: <RecordDetailPage /> },
