@@ -86,6 +86,10 @@ export const appActions = {
   enterEmergency(entry: EmergencyEntry) {
     update({ emergency: entry });
   },
+  // 새 문진을 시작하면 지난 응급 전환 정보를 지웁니다. 주소로 E01에 다시 들어와도 이전 말이 보이지 않게 합니다.
+  clearEmergency() {
+    update({ emergency: null });
+  },
   // 위치가 없을 때 한 번만 묻습니다. 거부했거나 받지 못했으면 다시 묻지 않습니다.
   askCurrentLocationOnce() {
     if (state.currentLocation.status !== "unasked") {

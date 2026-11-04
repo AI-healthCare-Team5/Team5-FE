@@ -798,6 +798,87 @@ describe("가짜 병원과 시·군", () => {
   });
 });
 
+describe("가짜 문진의 응급 전환", () => {
+  it("시작할 때 보낸 글에 정해 둔 문구가 있으면 EMERGENCY와 응급 정보를 돌려준다", async () => {
+    const api = await loadMockApi();
+
+    const started = await api.startIntake({
+      ...buttonStart,
+      text: " 가슴이 답답해요 ",
+    });
+
+    expect(started).toMatchObject({
+      status: "EMERGENCY",
+      question: null,
+      department: null,
+      summaryId: null,
+      emergency: {
+        userUtterance: "가슴이 답답해요",
+        redFlagCategory: "CHEST_PAIN",
+      },
+    });
+    await expect(api.getIntake(started.intakeId)).resolves.toMatchObject({
+      status: "EMERGENCY",
+    });
+  });
+
+  it("글로 한 답에 문구가 있으면 응급으로 바뀌고, 그 뒤 답변·이전 질문은 INTAKE_409(EMERGENCY)다", async () => {
+    const api = await loadMockApi();
+    const started = await api.startIntake(buttonStart);
+    let current = started;
+    // 복용약(FREE_TEXT) 질문까지 버튼으로 답합니다.
+    while (current.question && current.question.answerType !== "FREE_TEXT") {
+      const result = await api.answerIntake(current.intakeId, {
+        questionId: current.question.questionId,
+        ...answerFor(current.question),
+      });
+      if (result.kind !== "advanced") throw new Error(result.kind);
+      current = result.intake;
+    }
+    const question = current.question!;
+
+    const result = await api.answerIntake(current.intakeId, {
+      questionId: question.questionId,
+      inputMode: "TEXT",
+      answer: "약은 없고 가슴이 답답해요",
+    });
+
+    expect(result).toMatchObject({
+      kind: "advanced",
+      intake: {
+        status: "EMERGENCY",
+        question: null,
+        emergency: { userUtterance: "약은 없고 가슴이 답답해요" },
+      },
+    });
+    await expect(
+      api.answerIntake(current.intakeId, {
+        questionId: question.questionId,
+        inputMode: "TEXT",
+        answer: "없어요",
+      }),
+    ).resolves.toEqual({ kind: "ended", status: "EMERGENCY" });
+    await expect(api.goBackIntake(current.intakeId)).resolves.toEqual({
+      kind: "ended",
+      status: "EMERGENCY",
+    });
+  });
+
+  it("문구가 없는 시작과 버튼 답은 응급으로 바꾸지 않는다", async () => {
+    const api = await loadMockApi();
+
+    const started = await api.startIntake({
+      ...buttonStart,
+      text: "계단이 힘들어요",
+    });
+    const { last } = await answerAll(api, started);
+
+    expect(started.status).toBe("IN_PROGRESS");
+    expect(started.emergency).toBeNull();
+    expect(last.status).toBe("COMPLETED");
+  });
+});
+
 describe("가짜 응급실과 응급 카드", () => {
   it("응급실 2곳을 가까운 순으로 가짜 이름·전화번호와 24시간으로 돌려준다", async () => {
     const api = await loadMockApi();
