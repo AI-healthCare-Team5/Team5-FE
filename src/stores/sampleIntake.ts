@@ -87,6 +87,10 @@ function toQuestion({
 }
 
 function startLabels(start: IntakeStartRequest): string[] {
+  // 부위·시작 시점은 버튼 입력에만 있습니다.
+  if (start.inputMode !== "BUTTON") {
+    return [];
+  }
   const bodyPart = bodyPartOptions.find(
     (option) => option.value === start.bodyPart,
   );
