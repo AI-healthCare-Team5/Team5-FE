@@ -2,7 +2,10 @@ import { isApiError, SERVER_ERROR_MESSAGE } from "@/api/errors";
 import { REASK_MESSAGE } from "@/stores/intakeFlow";
 
 // POST /api/stt가 실패했을 때 화면이 보여 줄 안내와 다음 행동입니다.
-// 이슈 #28의 STT 오류 항목을 따릅니다. code는 {도메인}_{HTTP 상태}이고 도메인은 STT입니다(STT_422, STT_503).
+// 이슈 #28의 STT 오류 항목(400·413·415·422·503)을 따릅니다.
+// 확인된 code는 이슈 댓글의 STT_422, STT_503뿐입니다. 나머지는 공통 규칙({도메인}_{HTTP 상태})에서 추정한 값이라
+// Notion API 목록으로 확인하기 전까지는 확정된 계약으로 쓰지 않습니다.
+// 안내 문구도 이슈의 행동(다시 녹음·짧게·글로 입력)에 맞춘 임시 문구이고, 422의 문구만 이슈에 적힌 그대로입니다.
 export type SttFailureKind =
   // 400: 녹음을 다시 합니다.
   | "record-again"
