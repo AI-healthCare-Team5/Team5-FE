@@ -15,6 +15,7 @@ import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
 import { SummaryEditForm } from "@/pages/summary/components/SummaryEditForm";
 import { SummaryStorage } from "@/pages/summary/components/SummaryStorage";
 import { isSavePending } from "@/pages/summary/saveAfterReturn";
+import { actionForSaveOutcome } from "@/pages/summary/saveOutcome";
 import {
   createSummaryScreen,
   initialSummaryView,
@@ -92,28 +93,15 @@ export function SummaryPage() {
   const showSaveOutcome = useCallback(
     (outcome: SaveSummaryOutcome) => {
       if (!mounted.current) return;
-      switch (outcome.kind) {
-        case "saved":
-          setSaveMessage(null);
-          break;
-        case "needsConsent":
-        case "needsLogin":
-          // 로그인·동의를 마치면 이 화면으로 돌아와 이 요약지를 보관합니다.
-          appActions.prepareLogin("/summary", session);
-          navigate(
-            outcome.kind === "needsConsent" ? "/record-consent" : "/login",
-          );
-          break;
-        case "notReady":
-          navigate("/summary-loading", { replace: true });
-          break;
-        case "gone":
-          navigate("/", { replace: true });
-          break;
-        case "failed":
-          setSaveMessage(outcome.message);
-          break;
+      const action = actionForSaveOutcome(outcome);
+      if (action.kind === "message") {
+        setSaveMessage(action.message);
+        return;
       }
+      setSaveMessage(null);
+      // 로그인·동의를 마치면 이 화면으로 돌아와 이 요약지를 보관합니다.
+      if (action.resumeSave) appActions.prepareLogin("/summary", session);
+      navigate(action.to, { replace: action.replace });
     },
     [session, navigate],
   );
@@ -174,7 +162,8 @@ export function SummaryPage() {
     );
   }
 
-  const busy = view.busy !== null;
+  // 보관 요청이 진행 중이면 확인·수정도 잠급니다. 서버가 보관하면 요약지를 지우므로 그 뒤의 요청은 SUMMARY_404가 됩니다.
+  const busy = view.busy !== null || saving;
   const caption = view.createdAt
     ? `AI가 정리한 내용 · ${formatRecordDate(view.createdAt)}`
     : "AI가 정리한 내용";
@@ -253,7 +242,7 @@ export function SummaryPage() {
           <SummaryStorage
             loggedIn={loggedIn}
             saved={summarySaved}
-            saving={saving}
+            saving={busy}
             message={saveMessage}
             onLogin={() => goToRecordFlow("/login")}
             onSave={() => {

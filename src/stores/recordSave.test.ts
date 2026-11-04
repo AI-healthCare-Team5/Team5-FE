@@ -4,6 +4,10 @@ import { saveSummaryToRecords } from "@/api/records";
 import { appActions, getAppState } from "@/stores/appStore";
 import { beginIntakeSession, readIntakeSession } from "@/stores/intakeSession";
 import { saveCurrentSummary } from "@/stores/recordSave";
+import {
+  readSummarySession,
+  saveSummarySession,
+} from "@/stores/summarySession";
 
 vi.mock("@/api/records", () => ({ saveSummaryToRecords: vi.fn() }));
 
@@ -49,6 +53,43 @@ describe("요약지 보관", () => {
     expect(getAppState().summarySaved).toBe(true);
     expect(saveMock).toHaveBeenCalledWith("summary-1");
   });
+
+  it("보관하면 서버가 지운 문진·요약지의 기억도 함께 지운다", async () => {
+    beginIntakeSession({ intakeId: "intake-1" } as never);
+    saveSummarySession(session);
+    saveMock.mockResolvedValue({ medicalRecordId: 12, savedAt: "x" });
+
+    await saveCurrentSummary(session);
+
+    expect(readSummarySession()).toBeNull();
+    expect(readIntakeSession()).toBeNull();
+  });
+
+  it("이미 보관한 요약지(SUMMARY_409와 기록 ID)도 기억을 지운다", async () => {
+    saveSummarySession(session);
+    saveMock.mockRejectedValue(apiError("SUMMARY_409", { medicalRecordId: 7 }));
+
+    await saveCurrentSummary(session);
+
+    expect(readSummarySession()).toBeNull();
+  });
+
+  it.each([
+    ["아직 만드는 중(SUMMARY_409, result null)", apiError("SUMMARY_409")],
+    ["동의 없음(CONSENT_403)", apiError("CONSENT_403")],
+    ["로그인 풀림(AUTH_401)", apiError("AUTH_401")],
+    ["서버 오류", apiError("SUMMARY_500")],
+  ])(
+    "%s이면 서버에 요약지가 남아 있으므로 기억을 지우지 않는다",
+    async (_name, error) => {
+      saveSummarySession(session);
+      saveMock.mockRejectedValue(error);
+
+      await saveCurrentSummary(session);
+
+      expect(readSummarySession()).toEqual(session);
+    },
+  );
 
   it("SUMMARY_409에 기록 ID가 있으면 이미 보관한 것으로 다룬다", async () => {
     saveMock.mockRejectedValue(apiError("SUMMARY_409", { medicalRecordId: 7 }));

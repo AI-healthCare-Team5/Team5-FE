@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { ActionLink, Button, Card } from "@/components/ui";
 import { ScreenIcon } from "@/components/ScreenElements";
+import { WITHDRAW_CONFIRM_MESSAGE } from "@/pages/my-info/withdrawConfirm";
 
 export interface AccountCardProps {
   loggedIn: boolean;
@@ -84,7 +85,7 @@ export function AccountCard({
           </Button>
           {confirming && (
             <InlineConfirm
-              message="탈퇴하고 기록을 모두 지울까요? 기록 저장 동의도 함께 거두어져요."
+              message={WITHDRAW_CONFIRM_MESSAGE}
               busy={busy}
               onCancel={() => setConfirming(false)}
               onConfirm={onWithdraw}

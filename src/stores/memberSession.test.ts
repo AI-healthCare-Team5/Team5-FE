@@ -64,6 +64,21 @@ beforeEach(() => {
 });
 
 describe("내 정보 불러오기", () => {
+  it("응답이 도착한 뒤 취소됐다면 로그인 상태를 되살리지 않는다", async () => {
+    const controller = new AbortController();
+    getInfoMock.mockImplementation(async () => {
+      // 응답을 받은 직후 로그아웃이 시작되어 요청이 취소된 상황입니다.
+      controller.abort();
+      return info;
+    });
+
+    await expect(loadMember(controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+
+    expect(getAppState().loggedIn).toBe(false);
+  });
+
   it("성공하면 서버 값을 store에 반영한다", async () => {
     getInfoMock.mockResolvedValue(info);
 

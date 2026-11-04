@@ -10,7 +10,7 @@ import { resetIntakeFlow } from "@/stores/intakeSession";
 import type { SummarySession } from "@/stores/summarySession";
 
 export type SaveSummaryOutcome =
-  // 보관했습니다. alreadySaved는 이미 보관한 요약지라 서버가 기록 ID만 알려 준 경우입니다(SUMMARY_409).
+  // 보관했습니다. alreadySaved는 이미 보관한 요약지라 서버가 기록 ID만 알려 준 경우입니다(SUMMARY_409). 기록 상세(H02)로 안내합니다.
   | { kind: "saved"; medicalRecordId: number; alreadySaved: boolean }
   // 기록 저장 동의가 없습니다(CONSENT_403). 동의(C02)로 안내합니다.
   | { kind: "needsConsent" }
@@ -43,10 +43,18 @@ export function isSavingSummary(summaryId: string | undefined): boolean {
   return summaryId !== undefined && pending.has(summaryId);
 }
 
+// 서버는 보관하면 Redis의 문진·요약지를 바로 지웁니다(요약지가 DB 기록으로 옮겨집니다).
+// 같은 summaryId로 다시 조회·확인·수정하면 SUMMARY_404라서 기억한 문진·요약지 ID도 함께 지우고,
+// 화면은 기록 ID로 H02(기록 상세)에 보냅니다.
+function markSaved() {
+  appActions.markSummarySaved();
+  resetIntakeFlow();
+}
+
 async function save(session: SummarySession): Promise<SaveSummaryOutcome> {
   try {
     const result = await saveSummaryToRecords(session.summaryId);
-    appActions.markSummarySaved();
+    markSaved();
     return {
       kind: "saved",
       medicalRecordId: result.medicalRecordId,
@@ -65,7 +73,7 @@ async function save(session: SummarySession): Promise<SaveSummaryOutcome> {
     if (error.code === "SUMMARY_409") {
       const medicalRecordId = getSavedMedicalRecordId(error);
       if (medicalRecordId === null) return { kind: "notReady" };
-      appActions.markSummarySaved();
+      markSaved();
       return { kind: "saved", medicalRecordId, alreadySaved: true };
     }
     if (error.code === "SUMMARY_403" || error.code === "SUMMARY_404") {

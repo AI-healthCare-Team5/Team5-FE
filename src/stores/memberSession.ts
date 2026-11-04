@@ -23,7 +23,10 @@ export type MemberLoad = "loggedIn" | "loggedOut";
 // 새로고침하면 store의 로그인 상태가 사라지므로, 로그인이 필요한 화면은 이 함수로 먼저 확인합니다.
 export async function loadMember(signal?: AbortSignal): Promise<MemberLoad> {
   try {
-    appActions.applyMember(await getMyInfo(signal));
+    const info = await getMyInfo(signal);
+    // 응답이 도착한 뒤 취소됐다면(로그아웃을 시작했거나 화면을 떠남) 로그인 상태를 되살리지 않습니다.
+    signal?.throwIfAborted();
+    appActions.applyMember(info);
     return "loggedIn";
   } catch (error) {
     if (!isUnauthenticated(error)) throw error;

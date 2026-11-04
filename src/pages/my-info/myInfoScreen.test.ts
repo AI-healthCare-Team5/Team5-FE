@@ -152,14 +152,209 @@ describe("P01 계정 영역", () => {
     expect(withdrawMock).not.toHaveBeenCalled();
   });
 
-  it("불러오기 전에는 로그아웃·탈퇴할 수 없다", async () => {
+  it("불러오기 전에는 탈퇴할 수 없다", async () => {
     const { screen } = setup();
 
-    await screen.logout();
     await screen.withdraw();
 
-    expect(logoutMock).not.toHaveBeenCalled();
     expect(withdrawMock).not.toHaveBeenCalled();
+  });
+
+  describe("내 정보를 불러오지 못했을 때의 로그아웃", () => {
+    async function loadFailed() {
+      loadMock.mockRejectedValue(new ApiError("COMMON_501", "준비 중", 501));
+      const harness = setup();
+      await harness.screen.load();
+      expect(harness.last().phase).toBe("error");
+      return harness;
+    }
+
+    it("오류 화면에서도 로그아웃하면 서버에 요청하고 처음으로 간다", async () => {
+      const { screen, exits } = await loadFailed();
+      logoutMock.mockResolvedValue(undefined);
+
+      await screen.logout();
+
+      expect(logoutMock).toHaveBeenCalledTimes(1);
+      expect(exits).toEqual(["start"]);
+    });
+
+    it("내 정보를 다시 불러오지 않고 로그아웃 요청 하나만 보낸다", async () => {
+      const { screen } = await loadFailed();
+      logoutMock.mockResolvedValue(undefined);
+      loadMock.mockClear();
+
+      await screen.logout();
+
+      expect(loadMock).not.toHaveBeenCalled();
+    });
+
+    it("로그아웃이 실패하면 오류 화면을 유지하고 안내하며 다시 시도할 수 있다", async () => {
+      const { screen, last, exits } = await loadFailed();
+      logoutMock.mockRejectedValueOnce(new ApiError("NETWORK_ERROR", "", 0));
+
+      await screen.logout();
+      expect(last()).toMatchObject({
+        phase: "error",
+        busy: null,
+        actionMessage: SERVER_ERROR_MESSAGE,
+      });
+      expect(exits).toEqual([]);
+
+      logoutMock.mockResolvedValueOnce(undefined);
+      await screen.logout();
+      expect(exits).toEqual(["start"]);
+    });
+
+    it("오류 화면에서 누른 로그아웃을 연타해도 요청은 한 번만 보낸다", async () => {
+      const { screen, exits } = await loadFailed();
+      let resolve: () => void = () => {};
+      logoutMock.mockReturnValue(
+        new Promise<void>((res) => {
+          resolve = res;
+        }),
+      );
+
+      const first = screen.logout();
+      await screen.logout();
+      resolve();
+      await first;
+
+      expect(logoutMock).toHaveBeenCalledTimes(1);
+      expect(exits).toEqual(["start"]);
+    });
+
+    it("로그아웃 중에는 다시 불러오지 않고 탈퇴도 할 수 없다", async () => {
+      const { screen, last } = await loadFailed();
+      let resolve: () => void = () => {};
+      logoutMock.mockReturnValue(
+        new Promise<void>((res) => {
+          resolve = res;
+        }),
+      );
+      loadMock.mockClear();
+
+      const pending = screen.logout();
+      await screen.load();
+      await screen.withdraw();
+      expect(last()).toMatchObject({ phase: "error", busy: "logout" });
+      resolve();
+      await pending;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(withdrawMock).not.toHaveBeenCalled();
+    });
+
+    it("오류 화면에서는 탈퇴할 수 없다", async () => {
+      const { screen } = await loadFailed();
+
+      await screen.withdraw();
+
+      expect(withdrawMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("불러오는 중에 로그아웃하는 경우", () => {
+    // signal이 취소되면 거절하는 불러오기입니다. 응답이 도착하는 시점은 테스트가 정합니다.
+    function pendingLoad(honorAbort: boolean) {
+      let signal: AbortSignal | undefined;
+      let settle: (result: "loggedIn" | "loggedOut") => void = () => {};
+      loadMock.mockImplementation((requestSignal) => {
+        signal = requestSignal;
+        return new Promise((resolve, reject) => {
+          settle = resolve;
+          if (honorAbort) {
+            requestSignal?.addEventListener("abort", () =>
+              reject(requestSignal.reason),
+            );
+          }
+        });
+      });
+      return {
+        signal: () => signal,
+        settle: (result: "loggedIn" | "loggedOut") => settle(result),
+      };
+    }
+
+    it("로그아웃을 시작하면 불러오기 요청을 취소하고, 성공하면 처음으로 간다", async () => {
+      const load = pendingLoad(true);
+      const { screen, exits, views } = setup();
+      logoutMock.mockResolvedValue(undefined);
+
+      const loading = screen.load();
+      expect(views).toEqual([]);
+      await screen.logout();
+      await loading;
+
+      expect(load.signal()?.aborted).toBe(true);
+      expect(exits).toEqual(["start"]);
+    });
+
+    it("취소를 무시하고 늦게 도착한 불러오기 응답으로 화면을 바꾸지 않는다", async () => {
+      const load = pendingLoad(false);
+      const { screen, views, exits } = setup();
+      let resolve: () => void = () => {};
+      logoutMock.mockReturnValue(
+        new Promise<void>((res) => {
+          resolve = res;
+        }),
+      );
+
+      const loading = screen.load();
+      const logout = screen.logout();
+      load.settle("loggedIn");
+      await loading;
+      resolve();
+      await logout;
+
+      expect(views.some((view) => view.phase === "ready")).toBe(false);
+      expect(exits).toEqual(["start"]);
+    });
+
+    it("로그아웃이 실패하면 불러오기는 이미 취소되어 있으므로 오류 화면으로 바꿔 다시 시도할 수 있게 한다", async () => {
+      pendingLoad(true);
+      const { screen, last, exits } = setup();
+      logoutMock.mockRejectedValueOnce(new ApiError("NETWORK_ERROR", "", 0));
+
+      const loading = screen.load();
+      await screen.logout();
+      await loading;
+
+      expect(last()).toMatchObject({
+        phase: "error",
+        busy: null,
+        message: SERVER_ERROR_MESSAGE,
+      });
+      expect(exits).toEqual([]);
+
+      loadMock.mockResolvedValue("loggedIn");
+      await screen.load();
+      expect(last().phase).toBe("ready");
+    });
+
+    it("다시 불러오면 앞선 불러오기 요청은 취소하고 마지막 응답만 따른다", async () => {
+      const signals: AbortSignal[] = [];
+      const settles: Array<(result: "loggedIn" | "loggedOut") => void> = [];
+      loadMock.mockImplementation((signal) => {
+        if (signal) signals.push(signal);
+        return new Promise((resolve) => {
+          settles.push(resolve);
+        });
+      });
+      const { screen, views, last } = setup();
+
+      const first = screen.load();
+      const second = screen.load();
+      settles[0]("loggedIn");
+      await first;
+      expect(views).toEqual([]);
+      settles[1]("loggedOut");
+      await second;
+
+      expect(signals[0].aborted).toBe(true);
+      expect(signals[1].aborted).toBe(false);
+      expect(last().phase).toBe("ready");
+    });
   });
 
   it("화면을 떠난 뒤 끝난 로그아웃은 이동을 알리지 않는다", async () => {
