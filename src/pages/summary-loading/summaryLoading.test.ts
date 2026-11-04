@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, NETWORK_ERROR, SERVER_ERROR_MESSAGE } from "@/api/errors";
-import { cancelIntake } from "@/api/intakes";
+import { cancelIntake, type IntakeResponse } from "@/api/intakes";
 import {
   pollSummary,
   retrySummary,
@@ -15,6 +15,11 @@ import {
   type SummaryLoadingView,
 } from "@/pages/summary-loading/summaryLoading";
 import { sampleSummary } from "@/stores/fixtures";
+import {
+  beginIntakeSession,
+  readIntakeSession,
+  resetIntakeFlow,
+} from "@/stores/intakeSession";
 import {
   clearSummarySession,
   readSummarySession,
@@ -33,6 +38,22 @@ vi.mock("@/api/intakes", async (importOriginal) => ({
 
 // 모든 값은 가짜 데이터입니다.
 const session = { intakeId: "intake-1", summaryId: "summary-1" };
+const completedIntake: IntakeResponse = {
+  intakeId: "intake-1",
+  status: "COMPLETED",
+  stage: "BASIC_INFO",
+  progress: { current: 5, total: 5 },
+  collected: [],
+  question: null,
+  reask: false,
+  emergency: null,
+  department: {
+    departmentCode: "05",
+    departmentName: "정형외과",
+    recommendReason: "무릎 통증이 있어 정형외과 진료를 권해요.",
+  },
+  summaryId: "summary-1",
+};
 const pollMock = vi.mocked(pollSummary);
 const retryMock = vi.mocked(retrySummary);
 const cancelMock = vi.mocked(cancelIntake);
@@ -129,7 +150,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.stubGlobal("window", { sessionStorage: createStorage() });
-  clearSummarySession();
+  resetIntakeFlow();
   saveSummarySession(session);
   pollMock.mockReset();
   retryMock.mockReset();
@@ -137,7 +158,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  clearSummarySession();
+  resetIntakeFlow();
   vi.unstubAllGlobals();
 });
 
@@ -323,6 +344,29 @@ describe("S06a 다시 만들기 안내", () => {
 });
 
 describe("S06a 조회 실패", () => {
+  it("서버에 없는 요약지(SUMMARY_404)면 기억한 문진과 요약지 ID를 모두 지우고 처음으로 보낸다", async () => {
+    beginIntakeSession(completedIntake);
+    saveSummarySession(session);
+    pollMock.mockRejectedValue(apiError("SUMMARY_404", 404));
+    const { loading, exits } = setup();
+
+    await loading.start();
+
+    expect(exits).toEqual(["start"]);
+    expect(readSummarySession()).toBeNull();
+    expect(readIntakeSession()).toBeNull();
+  });
+
+  it("API 오류가 아닌 예외(코드 실수)는 서버 오류 안내로 바꾸지 않고 던지되 화면은 풀어 준다", async () => {
+    pollMock.mockRejectedValue(new TypeError("개발자 실수"));
+    const { loading, last } = setup();
+
+    await expect(loading.start()).rejects.toThrow("개발자 실수");
+
+    expect(last()).toMatchObject({ busy: false, message: null });
+    expect(last().phase).not.toBe("error");
+  });
+
   it.each([
     ["INTAKE_403", 403],
     ["INTAKE_404", 404],
@@ -374,7 +418,9 @@ describe("S06a 조회 실패", () => {
 });
 
 describe("S06a 취소", () => {
-  it("취소하면 문진을 지우고 기억한 ID를 지운 뒤 처음(/)으로 보낸다", async () => {
+  it("취소하면 문진을 지우고 기억한 문진과 요약지 ID를 지운 뒤 처음(/)으로 보낸다", async () => {
+    beginIntakeSession(completedIntake);
+    saveSummarySession(session);
     const polling = deferred<SummaryPollResult>();
     pollMock.mockReturnValue(polling.promise);
     cancelMock.mockResolvedValue({
@@ -390,6 +436,8 @@ describe("S06a 취소", () => {
     expect(cancelMock).toHaveBeenCalledTimes(1);
     expect(cancelMock.mock.calls[0][0]).toBe("intake-1");
     expect(readSummarySession()).toBeNull();
+    // 뒤로 가기로 병원 안내(S05)·추가 질문(S04a)에 돌아가도 지운 문진을 쓰지 않는다.
+    expect(readIntakeSession()).toBeNull();
     expect(exits).toEqual(["start"]);
   });
 
@@ -532,5 +580,24 @@ describe("S06a 화면을 떠날 때", () => {
     await started;
 
     expect(exits).toEqual([]);
+  });
+
+  it("취소가 끝나기 전에 화면을 떠났다면, 취소가 실패해도 조회를 다시 시작하지 않는다", async () => {
+    pollMock.mockImplementation(() => new Promise<SummaryPollResult>(() => {}));
+    const canceling = deferred<Awaited<ReturnType<typeof cancelIntake>>>();
+    cancelMock.mockReturnValue(canceling.promise);
+    const { loading, exits } = setup();
+    void loading.start();
+    await vi.waitFor(() => expect(pollMock).toHaveBeenCalledTimes(1));
+
+    const request = loading.cancel();
+    loading.dispose();
+    canceling.reject(new ApiError(NETWORK_ERROR, "", 0));
+    await request;
+
+    expect(pollMock).toHaveBeenCalledTimes(1);
+    expect(exits).toEqual([]);
+    // 떠난 뒤에는 기억한 ID를 건드리지 않아, 그 사이 시작한 흐름의 ID가 지워지지 않는다.
+    expect(readSummarySession()).toEqual(session);
   });
 });

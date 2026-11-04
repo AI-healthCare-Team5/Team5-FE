@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, NETWORK_ERROR, SERVER_ERROR_MESSAGE } from "@/api/errors";
+import type { IntakeResponse } from "@/api/intakes";
 import {
   confirmSummary,
   getSummary,
@@ -15,6 +16,11 @@ import {
 } from "@/pages/summary/summaryScreen";
 import { sampleSummary } from "@/stores/fixtures";
 import {
+  beginIntakeSession,
+  readIntakeSession,
+  resetIntakeFlow,
+} from "@/stores/intakeSession";
+import {
   clearSummarySession,
   readSummarySession,
   saveSummarySession,
@@ -29,6 +35,22 @@ vi.mock("@/api/summaries", async (importOriginal) => ({
 
 // 모든 값은 가짜 데이터입니다.
 const session = { intakeId: "intake-1", summaryId: "summary-1" };
+const completedIntake: IntakeResponse = {
+  intakeId: "intake-1",
+  status: "COMPLETED",
+  stage: "BASIC_INFO",
+  progress: { current: 5, total: 5 },
+  collected: [],
+  question: null,
+  reask: false,
+  emergency: null,
+  department: {
+    departmentCode: "05",
+    departmentName: "정형외과",
+    recommendReason: "무릎 통증이 있어 정형외과 진료를 권해요.",
+  },
+  summaryId: "summary-1",
+};
 const getMock = vi.mocked(getSummary);
 const updateMock = vi.mocked(updateSummary);
 const confirmMock = vi.mocked(confirmSummary);
@@ -111,7 +133,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.stubGlobal("window", { sessionStorage: createStorage() });
-  clearSummarySession();
+  resetIntakeFlow();
   saveSummarySession(session);
   getMock.mockReset();
   updateMock.mockReset();
@@ -119,7 +141,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  clearSummarySession();
+  resetIntakeFlow();
   vi.unstubAllGlobals();
 });
 
@@ -190,15 +212,32 @@ describe("S06 불러오기", () => {
     ["INTAKE_404", 404],
     ["SUMMARY_403", 403],
     ["SUMMARY_404", 404],
-  ])("%s이면 기억한 ID를 지우고 처음(/)으로 보낸다", async (code, status) => {
-    getMock.mockRejectedValue(apiError(code, status));
-    const { screen, exits, views } = setup();
+  ])(
+    "%s이면 기억한 문진과 요약지 ID를 지우고 처음(/)으로 보낸다",
+    async (code, status) => {
+      beginIntakeSession(completedIntake);
+      saveSummarySession(session);
+      getMock.mockRejectedValue(apiError(code, status));
+      const { screen, exits, views } = setup();
 
-    await screen.load();
+      await screen.load();
 
-    expect(exits).toEqual(["start"]);
-    expect(readSummarySession()).toBeNull();
-    expect(views.some((view) => view.phase === "error")).toBe(false);
+      expect(exits).toEqual(["start"]);
+      expect(readSummarySession()).toBeNull();
+      // 뒤로 가기로 병원 안내(S05)·추가 질문(S04a)에 돌아가도 없어진 문진을 쓰지 않는다.
+      expect(readIntakeSession()).toBeNull();
+      expect(views.some((view) => view.phase === "error")).toBe(false);
+    },
+  );
+
+  it("API 오류가 아닌 예외(코드 실수)는 서버 오류 안내로 바꾸지 않고 던진다", async () => {
+    getMock.mockRejectedValue(new TypeError("개발자 실수"));
+    const { screen, last, exits } = setup();
+
+    await expect(screen.load()).rejects.toThrow("개발자 실수");
+
+    expect(last()).toMatchObject({ phase: "error", message: null });
+    expect(exits).toEqual([]);
   });
 
   it("SUMMARY_409면 만드는 중 화면으로 보낸다", async () => {
@@ -308,6 +347,16 @@ describe("S06 내용이 맞아요", () => {
     });
     expect(last().summary?.isConfirmed).toBe(false);
     expect(exits).toEqual([]);
+  });
+
+  it("API 오류가 아닌 예외(코드 실수)는 서버 오류 안내로 바꾸지 않고 던지되 버튼은 풀어 준다", async () => {
+    const { screen, last } = await loaded();
+    confirmMock.mockRejectedValue(new TypeError("개발자 실수"));
+
+    await expect(screen.confirm()).rejects.toThrow("개발자 실수");
+
+    expect(last()).toMatchObject({ busy: null, confirmMessage: null });
+    expect(last().summary?.isConfirmed).toBe(false);
   });
 
   it("실패한 뒤 다시 누르면 성공하고 안내가 사라진다", async () => {
@@ -458,6 +507,22 @@ describe("S06 수정 저장", () => {
       summary: sampleSummary,
     });
     expect(exits).toEqual([]);
+  });
+
+  it("API 오류가 아닌 예외(코드 실수)는 서버 오류 안내로 바꾸지 않고 던지되 저장 버튼은 풀어 준다", async () => {
+    const { screen, last } = await loaded();
+    screen.startEdit();
+    const edits = { ...initialEdits(sampleSummary), mainSymptom: "OO 불편" };
+    updateMock.mockRejectedValue(new TypeError("개발자 실수"));
+
+    await expect(screen.save(edits)).rejects.toThrow("개발자 실수");
+
+    expect(last()).toMatchObject({
+      editing: true,
+      busy: null,
+      saveMessage: null,
+      summary: sampleSummary,
+    });
   });
 
   it("400에 errors가 비어 있어도 서버 문장으로 안내하고 폼을 유지한다", async () => {

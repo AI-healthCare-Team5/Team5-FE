@@ -1,4 +1,4 @@
-import { getErrorMessage, isSessionGone } from "@/api/errors";
+import { getErrorMessage, isApiError, isSessionGone } from "@/api/errors";
 import { cancelIntake } from "@/api/intakes";
 import {
   isSummaryConflict,
@@ -6,8 +6,8 @@ import {
   retrySummary,
   type SummaryStepState,
 } from "@/api/summaries";
+import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
-  clearSummarySession,
   readSummarySession,
   type SummarySession,
 } from "@/stores/summarySession";
@@ -80,14 +80,20 @@ export function createSummaryLoading(
   }
 
   function leave(to: SummaryLoadingExit) {
-    // 화면을 떠난 뒤에 취소가 끝나도 서버에 없는 문진을 가리키지 않게 지웁니다.
-    if (to === "start") clearSummarySession();
+    // 화면을 떠난 뒤에 취소가 끝나도 서버에 없는 문진을 가리키지 않게, 기억한 문진과 요약지 ID를 모두 지웁니다.
+    // 요약지 ID만 지우면 뒤로 가기로 돌아온 병원 안내(S05)와 추가 질문(S04a)이 없어진 문진을 계속 씁니다.
+    if (to === "start") resetIntakeFlow();
     if (disposed || exited) return;
     exited = true;
     hooks.onExit(to);
   }
 
+  // 코드 실수는 서버 오류 안내로 바꾸지 않고, 화면만 풀어 준 뒤 그대로 던집니다.
   function fail(error: unknown) {
+    if (!isApiError(error)) {
+      update({ busy: false });
+      throw error;
+    }
     if (isSessionGone(error)) {
       leave("start");
       return;
@@ -173,6 +179,8 @@ export function createSummaryLoading(
       // 이미 없는 문진(403, 404)은 취소된 것과 같습니다.
       if (!isSessionGone(error)) {
         update({ busy: false, cancelMessage: getErrorMessage(error) });
+        // 취소가 끝나기 전에 화면을 떠났다면 조회를 다시 시작하지 않습니다(아무도 멈추지 못합니다).
+        if (disposed) return;
         if (resumePolling && session) void poll(session, retryUnsent);
         return;
       }

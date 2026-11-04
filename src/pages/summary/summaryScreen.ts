@@ -3,6 +3,7 @@ import {
   getErrorMessage,
   getFieldErrors,
   INVALID_RESPONSE,
+  isApiError,
   isSessionGone,
 } from "@/api/errors";
 import {
@@ -18,8 +19,8 @@ import {
   canSaveEdits,
   type SummaryEdits,
 } from "@/pages/summary/editSummary";
+import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
-  clearSummarySession,
   readSummarySession,
   type SummarySession,
 } from "@/stores/summarySession";
@@ -99,7 +100,8 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
   }
 
   function leave(to: SummaryScreenExit) {
-    if (to === "start") clearSummarySession();
+    // 서버에 없는 요약지라 기억한 문진과 요약지 ID를 모두 지웁니다(뒤로 가기로 돌아간 화면이 없어진 문진을 쓰지 않게).
+    if (to === "start") resetIntakeFlow();
     if (disposed || exited) return;
     exited = true;
     hooks.onExit(to);
@@ -116,6 +118,21 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
       return true;
     }
     return false;
+  }
+
+  // 요청이 실패했을 때입니다. 코드 실수는 서버 오류 안내로 바꾸지 않고, release로 화면만 풀어 준 뒤 그대로 던집니다.
+  function handleFailure(
+    error: unknown,
+    release: () => void,
+    show: (error: unknown) => void,
+  ) {
+    if (requests.signal.aborted) return;
+    if (!isApiError(error)) {
+      release();
+      throw error;
+    }
+    if (routeAway(error)) return;
+    show(error);
   }
 
   async function load() {
@@ -142,9 +159,12 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
         createdAt: response.createdAt,
       });
     } catch (error) {
-      if (requests.signal.aborted) return;
-      if (routeAway(error)) return;
-      update({ phase: "error", message: getErrorMessage(error) });
+      handleFailure(
+        error,
+        () => update({ phase: "error", message: null }),
+        (failure) =>
+          update({ phase: "error", message: getErrorMessage(failure) }),
+      );
     }
   }
 
@@ -161,9 +181,12 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
         summary: { ...current, isConfirmed: result.isConfirmed },
       });
     } catch (error) {
-      if (requests.signal.aborted) return;
-      if (routeAway(error)) return;
-      update({ busy: null, confirmMessage: getErrorMessage(error) });
+      handleFailure(
+        error,
+        () => update({ busy: null }),
+        (failure) =>
+          update({ busy: null, confirmMessage: getErrorMessage(failure) }),
+      );
     }
   }
 
@@ -211,13 +234,16 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
         confirmMessage: null,
       });
     } catch (error) {
-      if (requests.signal.aborted) return;
-      if (routeAway(error)) return;
-      update({
-        busy: null,
-        saveMessage: getErrorMessage(error),
-        saveFieldErrors: getFieldErrors(error),
-      });
+      handleFailure(
+        error,
+        () => update({ busy: null }),
+        (failure) =>
+          update({
+            busy: null,
+            saveMessage: getErrorMessage(failure),
+            saveFieldErrors: getFieldErrors(failure),
+          }),
+      );
     }
   }
 
