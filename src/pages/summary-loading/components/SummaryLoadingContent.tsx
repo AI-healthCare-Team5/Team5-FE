@@ -98,12 +98,13 @@ export function SummaryLoadingContent({
             {stopped ? "다시 만들기" : "다시 시도"}
           </Button>
         )}
+        {/* 두 단계 모두 서버의 문진과 요약지를 지우는 cancel()을 부르므로 라벨도 같게 둡니다. */}
         <Button
           variant={stopped ? "outline" : "quiet"}
           disabled={view.busy}
           onClick={onCancel}
         >
-          {stopped ? "처음으로" : "취소하고 처음으로"}
+          취소하고 처음으로
         </Button>
       </div>
     </>

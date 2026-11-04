@@ -98,7 +98,7 @@ describe("S06a 다시 만들기 안내", () => {
     expect(html).toContain("요약지를 만드는 중 문제가 생겼어요.");
     expect(html).toContain('role="alert"');
     expect(buttonAttributes(html, "다시 만들기")).not.toBeNull();
-    expect(buttonAttributes(html, "처음으로")).not.toBeNull();
+    expect(buttonAttributes(html, "취소하고 처음으로")).not.toBeNull();
     expect(html).not.toContain("animate-spin");
     // 멈춘 단계의 "하는 중"이 실패 안내와 부딪치지 않게 단계 목록은 숨긴다.
     expect(html).not.toContain("<ol");
@@ -120,14 +120,27 @@ describe("S06a 다시 만들기 안내", () => {
     });
 
     expect(buttonAttributes(html, "다시 만들기")).toContain('disabled=""');
-    expect(buttonAttributes(html, "처음으로")).toContain('disabled=""');
+    expect(buttonAttributes(html, "취소하고 처음으로")).toContain(
+      'disabled=""',
+    );
+  });
+
+  it("처음으로 가는 버튼은 문진을 취소한다는 것을 만드는 중과 같은 라벨로 알린다", () => {
+    const polling = render({ steps: [...steps] });
+    const stopped = render({ phase: "needsRetry", reason: "failed" });
+
+    expect(buttonAttributes(polling, "취소하고 처음으로")).not.toBeNull();
+    expect(buttonAttributes(stopped, "취소하고 처음으로")).not.toBeNull();
+    expect(buttonAttributes(stopped, "처음으로")).toBeNull();
   });
 
   it("버튼이 잠기지 않았을 때는 disabled가 없다", () => {
     const html = render({ phase: "needsRetry", reason: "failed" });
 
     expect(buttonAttributes(html, "다시 만들기")).not.toContain('disabled=""');
-    expect(buttonAttributes(html, "처음으로")).not.toContain('disabled=""');
+    expect(buttonAttributes(html, "취소하고 처음으로")).not.toContain(
+      'disabled=""',
+    );
   });
 });
 
@@ -150,6 +163,6 @@ describe("S06a 조회 실패와 취소 실패", () => {
     });
 
     expect(html).toContain("취소하지 못했어요. 잠시 후 다시 해 주세요.");
-    expect(buttonAttributes(html, "처음으로")).not.toBeNull();
+    expect(buttonAttributes(html, "취소하고 처음으로")).not.toBeNull();
   });
 });

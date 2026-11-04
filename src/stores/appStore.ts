@@ -105,8 +105,11 @@ export const appActions = {
   // 동의 화면(C02)처럼 요약지를 모르는 곳이 인자 없이 부르면 보관하지 않고,
   // 동의 뒤 S06으로 돌아왔을 때 S06이 saveTarget을 보고 보관합니다.
   // 같은 요약지를 두 번 보관하지 않습니다(StrictMode의 effect 두 번 실행 포함).
+  // 기록 저장 API(#29)가 연결되기 전까지 실제 경로에서는 보관하지 않습니다.
+  // 메모리에만 남는 기록을 저장 성공으로 보여 주지 않으려는 것이고, 로그인 복귀 후 자동 보관도 여기서 막힙니다.
   saveSummary(summary?: SummaryContent) {
     if (
+      !isMockApi ||
       !summary ||
       !state.loggedIn ||
       !state.recordConsent ||
