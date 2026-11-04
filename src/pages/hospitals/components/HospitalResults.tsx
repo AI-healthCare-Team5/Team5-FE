@@ -1,12 +1,11 @@
 import { useState } from "react";
 import type { HospitalSearchResult } from "@/api/hospitals";
 import type { DepartmentRecommendation } from "@/api/intakes";
-import { DesignIcon } from "@/components/DesignIcon";
+import { PublicDataNotice } from "@/components/PublicDataNotice";
 import { HospitalMap } from "@/components/map/HospitalMap";
 import type { MapLocation } from "@/components/map/types";
 import { ActionLink, PageTitle } from "@/components/ui";
 import { HospitalCard } from "@/pages/hospitals/components/HospitalCard";
-import { formatRecordDate } from "@/pages/records/formatRecordDate";
 
 // 추천 이유는 API가 만든 문장이라, 면책 문장은 화면에서 항상 붙입니다.
 const disclaimer = "진단이 아니라 진료과 안내예요.";
@@ -70,14 +69,7 @@ export function HospitalResults({
             );
           })}
         </ol>
-        <p className="flex items-start gap-[10px] rounded-[14px] bg-notice px-4 py-[14px] text-[0.889rem] text-notice-ink">
-          <DesignIcon name="info" size={20} />
-          <span>
-            공공데이터 기준 · {formatRecordDate(result.dataUpdatedAt)} 갱신
-            <br />
-            가기 전에 전화로 진료 여부를 꼭 확인하세요.
-          </span>
-        </p>
+        <PublicDataNotice dataUpdatedAt={result.dataUpdatedAt} />
       </section>
       <div className="flex flex-col gap-3">
         <ActionLink to="/summary-loading">
