@@ -25,6 +25,8 @@ import {
   clearSummarySession,
   saveSummarySession,
 } from "@/stores/summarySession";
+import { appActions } from "@/stores/appStore";
+import { toEmergencyEntry, type EmergencyEntry } from "@/stores/emergency";
 
 // S04a(추가 질문)의 동작입니다. React 밖에 두어서 화면 없이 테스트합니다.
 // 화면은 onView로 받은 view를 그리고, onExit로 받은 곳으로 이동합니다.
@@ -43,7 +45,7 @@ export interface IntakeQuestionsView {
 }
 
 // text-input: 첫 질문에서 이전으로 가서 S04의 부위·시작 시점을 다시 고릅니다.
-// emergency: 위험 신호로 판정돼 문진을 멈추고 응급 안내(E01)로 갑니다. 응급 화면 연결은 #27이 맡습니다.
+// emergency: 서버가 위험 신호로 판정해 문진을 멈추고 응급 안내(E01)로 갑니다. 응급 정보는 appActions.enterEmergency로 넘깁니다.
 // start: 문진이 없어졌거나 취소돼 처음(/)으로 갑니다.
 export type IntakeQuestionsExit = "text-input" | "emergency" | "start";
 
@@ -125,14 +127,22 @@ export function createIntakeQuestions(
     leave("start");
   }
 
+  // 서버가 위험 신호로 판정해 문진을 멈췄습니다. E01이 보여 줄 응급 정보를 기억하고 응급 안내로 갑니다.
+  function escalate(emergency: EmergencyEntry) {
+    clearIntakeSession();
+    if (disposed || exited) return;
+    appActions.enterEmergency(emergency);
+    leave("emergency");
+  }
+
   // 서버가 알려 준 새 상태를 화면에 반영합니다.
   function apply(
     next: IntakeResponse,
     restored: SubmittedAnswer | null = null,
   ) {
-    if (next.status === "EMERGENCY") {
-      clearIntakeSession();
-      leave("emergency");
+    const emergency = toEmergencyEntry(next);
+    if (emergency) {
+      escalate(emergency);
       return;
     }
     if (next.status === "CANCELED") {
@@ -177,8 +187,8 @@ export function createIntakeQuestions(
       // 완료 응답의 진료과와 요약지 ID가 필요하니 다시 조회합니다.
       apply(await getIntake(view.intake.intakeId, requests.signal));
     } else if (result.status === "EMERGENCY") {
-      clearIntakeSession();
-      leave("emergency");
+      // 응답에 응급 정보가 없어 "말씀하신 내용"은 비워 둡니다. 다시 조회하지 않고 바로 119 안내로 갑니다.
+      escalate({ intakeId: view.intake.intakeId, userUtterance: null });
     } else {
       forget();
     }

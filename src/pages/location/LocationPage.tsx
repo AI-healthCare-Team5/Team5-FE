@@ -5,6 +5,7 @@ import {
   ScreenIcon,
 } from "@/components/ScreenElements";
 import { WarningNotice } from "@/components/WarningNotice";
+import { LOCATION_FAILED_MESSAGE } from "@/components/map/currentPosition";
 import { ActionLink, Button, PageTitle } from "@/components/ui";
 import { isLocationFailed } from "@/pages/hospitals/hospitalSearch";
 export function LocationPage() {
@@ -37,9 +38,7 @@ export function LocationPage() {
         ]}
       />
       {locationFailed && (
-        <WarningNotice>
-          현재 위치를 확인하지 못했어요. 위치 사용을 허용한 뒤 다시 눌러 주세요.
-        </WarningNotice>
+        <WarningNotice>{LOCATION_FAILED_MESSAGE}</WarningNotice>
       )}
       <div className="flex flex-col gap-3">
         <ActionLink to="/hospitals">

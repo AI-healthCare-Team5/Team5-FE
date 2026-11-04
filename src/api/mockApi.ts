@@ -16,6 +16,7 @@ import {
 } from "@/api/enums";
 import { ApiError } from "@/api/errors";
 import type {
+  EmergencyRoomParams,
   HealthCenterResult,
   Hospital,
   HospitalDepartment,
@@ -28,6 +29,7 @@ import type {
   IntakeAnswerRequest,
   IntakeCancelResult,
   IntakeDepartmentResult,
+  IntakeEmergency,
   IntakeQuestion,
   IntakeResponse,
   IntakeStartRequest,
@@ -205,6 +207,50 @@ const mockHealthCenter: Hospital = {
   },
 };
 
+// 응급실은 항상 24시간으로 내려옵니다.
+const mockEmergencyRooms: Hospital[] = [
+  {
+    hospitalId: 301,
+    name: "OO대학교병원 응급의료센터",
+    hospitalType: "11",
+    hospitalTypeName: "종합병원",
+    departments: [{ departmentCode: "24", departmentName: "응급의학과" }],
+    distanceKm: 4.8,
+    latitude: 37.7105,
+    longitude: 127.9021,
+    phoneNumber: "033-000-0000",
+    address: "강원특별자치도 OO시 OO로 00",
+    hasEmergencyRoom: true,
+    today: {
+      isOpen: true,
+      is24Hours: true,
+      openTime: "00:00",
+      closeTime: "23:59",
+      nextOpenAt: null,
+    },
+  },
+  {
+    hospitalId: 302,
+    name: "△△병원 응급실",
+    hospitalType: "21",
+    hospitalTypeName: "병원",
+    departments: [{ departmentCode: "24", departmentName: "응급의학과" }],
+    distanceKm: 12.6,
+    latitude: 37.7801,
+    longitude: 127.9502,
+    phoneNumber: "033-000-0000",
+    address: "강원특별자치도 △△시 △△로 00",
+    hasEmergencyRoom: true,
+    today: {
+      isOpen: true,
+      is24Hours: true,
+      openTime: "00:00",
+      closeTime: "23:59",
+      nextOpenAt: null,
+    },
+  },
+];
+
 // 서버처럼 위치(latitude·longitude)와 지역(regionCode)이 모두 없으면 location 오류를 냅니다.
 function requireLocation(params: HospitalLocationParams) {
   const hasPoint =
@@ -215,7 +261,7 @@ function requireLocation(params: HospitalLocationParams) {
   });
 }
 
-// 서버처럼 radius(정수, 1~30)와 limit(정수, 1~20)이 범위를 벗어나면 해당 field로 오류를 냅니다.
+// 서버처럼 radius와 limit이 정수 범위를 벗어나면 해당 field로 오류를 냅니다.
 // 실제 서버 경로에서는 검증하지 않고 서버가 판단합니다.
 function requireIntegerInRange(
   field: string,
@@ -278,6 +324,25 @@ export function getNearestHealthCenter(
   return {
     dataUpdatedAt: DATA_UPDATED_AT,
     hospital: structuredClone(mockHealthCenter),
+  };
+}
+
+export function getEmergencyRooms(
+  params: EmergencyRoomParams,
+  radius: number,
+  limit: number,
+): HospitalSearchResult {
+  requireLocation(params);
+  requireIntegerInRange("radius", radius, 1, 50);
+  requireIntegerInRange("limit", limit, 1, 10);
+  const inRadius = mockEmergencyRooms.filter(
+    (item) => item.distanceKm <= radius,
+  );
+  return {
+    radiusKm: radius,
+    dataUpdatedAt: DATA_UPDATED_AT,
+    totalCount: inRadius.length,
+    hospitals: structuredClone(inRadius.slice(0, limit)),
   };
 }
 
@@ -381,6 +446,8 @@ interface MockIntake {
   start: IntakeStartRequest;
   answers: MockAnswer[];
   summaryId: string | null;
+  // 응급 전환된 문진이면 채웁니다. 그 뒤로는 서버처럼 답변·이전 질문을 받지 않습니다.
+  emergency: IntakeEmergency | null;
 }
 
 interface MockSummary {
@@ -432,6 +499,24 @@ function isCompleted(intake: MockIntake): boolean {
   return intake.answers.length >= sequenceOf(intake).length;
 }
 
+// 가짜 응답에서 응급 전환(E01)을 볼 수 있게 하는 규칙입니다. 서버의 위험 신호 규칙을 흉내 내지 않습니다.
+// 시작할 때 보낸 글(S04 "더 알려주실 내용")이나 글·말로 한 답에 이 문구가 있으면 EMERGENCY로 응답합니다.
+const MOCK_EMERGENCY_TEXT = "가슴이 답답";
+
+function mockEmergencyOf(
+  text: string | null | undefined,
+): IntakeEmergency | null {
+  const utterance = text?.trim() ?? "";
+  if (!utterance.includes(MOCK_EMERGENCY_TEXT)) return null;
+  return { userUtterance: utterance, redFlagCategory: "CHEST_PAIN" };
+}
+
+// 끝났거나 응급 전환된 문진은 서버처럼 INTAKE_409와 그 상태를 돌려줍니다.
+function requireInProgress(intake: MockIntake) {
+  if (intake.emergency) throw intakeConflict("EMERGENCY");
+  if (isCompleted(intake)) throw intakeConflict("COMPLETED");
+}
+
 function toQuestion(question: MockQuestion): IntakeQuestion {
   return {
     questionId: question.questionId,
@@ -468,6 +553,27 @@ function toIntakeResponse(intake: MockIntake, reask = false): IntakeResponse {
   const sequence = sequenceOf(intake);
   const current = sequence[intake.answers.length];
   const collected = collectedOf(intake);
+
+  if (intake.emergency) {
+    // 응급 전환된 문진은 질문 없이 응급 정보만 돌려줍니다. 단계와 진행은 멈춘 자리 그대로입니다.
+    const stage = current?.stage ?? "BASIC_INFO";
+    const sameStage = sequence.filter((item) => item.stage === stage);
+    return {
+      intakeId: intake.intakeId,
+      status: "EMERGENCY",
+      stage,
+      progress: {
+        current: current ? sameStage.indexOf(current) + 1 : sameStage.length,
+        total: sameStage.length,
+      },
+      collected,
+      question: null,
+      reask: false,
+      emergency: { ...intake.emergency },
+      department: null,
+      summaryId: null,
+    };
+  }
 
   if (!current) {
     const total = basicInfoQuestions.length;
@@ -521,6 +627,7 @@ export function startIntake(request: IntakeStartRequest): IntakeResponse {
     start: { ...request },
     answers: [],
     summaryId: null,
+    emergency: mockEmergencyOf(request.text),
   };
   intakes.set(intake.intakeId, intake);
   return toIntakeResponse(intake);
@@ -535,10 +642,19 @@ export function answerIntake(
   request: IntakeAnswerRequest,
 ): IntakeResponse {
   const intake = findIntake(intakeId);
-  if (isCompleted(intake)) throw intakeConflict("COMPLETED");
+  requireInProgress(intake);
 
   const question = sequenceOf(intake)[intake.answers.length];
   if (request.questionId !== question.questionId) throw intakeConflict(null);
+
+  // 글·말로 한 답도 시작할 때와 같은 규칙으로 응급 전환을 봅니다. 버튼 답(code)은 보지 않습니다.
+  if (request.inputMode !== "BUTTON") {
+    const emergency = mockEmergencyOf(request.answer);
+    if (emergency) {
+      intake.emergency = emergency;
+      return toIntakeResponse(intake);
+    }
+  }
 
   if (question.answerType === "FREE_TEXT") {
     // FREE_TEXT는 말·글로만 답할 수 있습니다. 서버처럼 BUTTON이면 400이고, 빈 답도 400입니다.
@@ -588,7 +704,7 @@ export function answerIntake(
 
 export function goBackIntake(intakeId: string): IntakeResponse {
   const intake = findIntake(intakeId);
-  if (isCompleted(intake)) throw intakeConflict("COMPLETED");
+  requireInProgress(intake);
   if (intake.answers.length === 0) {
     throw badRequest("INTAKE_400", "intakeId", "첫 질문이라 돌아갈 수 없어요.");
   }

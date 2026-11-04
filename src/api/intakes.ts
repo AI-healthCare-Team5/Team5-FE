@@ -42,7 +42,7 @@ export interface IntakeProgress {
   total: number;
 }
 
-// status가 EMERGENCY일 때만 채워집니다. 응급 화면은 #27에서 연결합니다.
+// status가 EMERGENCY일 때만 채워집니다. E01 "말씀하신 내용"에 userUtterance를 보여 줍니다(src/stores/emergency.ts).
 export interface IntakeEmergency {
   userUtterance: string;
   redFlagCategory: RedFlagCategory;

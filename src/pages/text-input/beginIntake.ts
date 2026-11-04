@@ -5,7 +5,13 @@ import {
   isApiError,
 } from "@/api/errors";
 import { cancelIntake, startIntake } from "@/api/intakes";
-import { beginIntakeSession, readIntakeSession } from "@/stores/intakeSession";
+import { appActions } from "@/stores/appStore";
+import { toEmergencyEntry } from "@/stores/emergency";
+import {
+  beginIntakeSession,
+  clearIntakeSession,
+  readIntakeSession,
+} from "@/stores/intakeSession";
 import type {
   ButtonIntakeStartRequest,
   IntakeStartRequest,
@@ -48,7 +54,14 @@ export async function beginIntake(
     return { kind: "aborted" };
   }
 
-  if (intake.status === "EMERGENCY") {
+  // 위험 신호 판정은 서버가 합니다. E01이 "말씀하신 내용"을 보여 주도록 응답의 응급 정보를 기억합니다.
+  const emergency = toEmergencyEntry(intake);
+  if (emergency) {
+    // S04로 돌아와 다시 시작한 경우입니다. 먼저 시작한 문진은 이어갈 수 없으니 지웁니다.
+    const previous = readIntakeSession();
+    if (previous) discard(previous.intake.intakeId);
+    clearIntakeSession();
+    appActions.enterEmergency(emergency);
     return { kind: "emergency" };
   }
   if (intake.status !== "IN_PROGRESS" || !intake.question) {
@@ -64,6 +77,7 @@ export async function beginIntake(
   const previous = readIntakeSession();
   if (previous) discard(previous.intake.intakeId);
   beginIntakeSession(intake);
+  appActions.clearEmergency();
   return { kind: "started" };
 }
 
