@@ -2,23 +2,16 @@ import { Link, useNavigate } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
 import { ActionLink, Button, Chip, Notice, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
-
-const symptoms = [
-  "머리",
-  "가슴",
-  "배",
-  "허리",
-  "팔 · 어깨",
-  "다리 · 무릎",
-  "피부",
-  "기타",
-];
-const durations = ["오늘", "2~3일", "일주일 이상"];
+import {
+  bodyPartOptions,
+  createButtonIntakeRequest,
+  onsetOptions,
+} from "@/stores/intakeStart";
 
 export function TextInputPage() {
   const { interview } = useAppStore();
   const navigate = useNavigate();
-  const ready = Boolean(interview.symptom && interview.duration);
+  const intakeRequest = createButtonIntakeRequest(interview);
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -50,13 +43,13 @@ export function TextInputPage() {
           어디가 불편하세요?
         </h2>
         <div className="grid grid-cols-2 gap-[10px]">
-          {symptoms.map((symptom) => (
+          {bodyPartOptions.map(({ value, label }) => (
             <Chip
-              key={symptom}
-              selected={interview.symptom === symptom}
-              onClick={() => appActions.answer("symptom", symptom)}
+              key={value}
+              selected={interview.symptom === label}
+              onClick={() => appActions.answer("symptom", label)}
             >
-              {symptom}
+              {label}
             </Chip>
           ))}
         </div>
@@ -69,13 +62,13 @@ export function TextInputPage() {
           언제부터 그러세요?
         </h2>
         <div className="flex flex-col gap-[10px]">
-          {durations.map((duration) => (
+          {onsetOptions.map(({ value, label }) => (
             <Chip
-              key={duration}
-              selected={interview.duration === duration}
-              onClick={() => appActions.answer("duration", duration)}
+              key={value}
+              selected={interview.duration === label}
+              onClick={() => appActions.answer("duration", label)}
             >
-              {duration}
+              {label}
             </Chip>
           ))}
         </div>
@@ -102,8 +95,14 @@ export function TextInputPage() {
           다음 화면에서 나이, 복용약 등 몇 가지만 더 여쭤볼게요.
         </p>
         <Button
-          disabled={!ready}
-          onClick={() => navigate("/text-input/questions")}
+          disabled={!intakeRequest}
+          onClick={() => {
+            if (!intakeRequest) {
+              return;
+            }
+            appActions.prepareIntake(intakeRequest);
+            navigate("/text-input/questions");
+          }}
         >
           다음
         </Button>
