@@ -14,7 +14,7 @@ type QueryValue = string | number | boolean | null | undefined;
 
 export interface ApiRequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  // JSON으로 보낼 본문입니다.
+  // JSON으로 보낼 본문입니다. FormData면 multipart로 그대로 보냅니다(POST /api/stt).
   body?: unknown;
   // 값이 null·undefined인 키는 보내지 않습니다.
   query?: Record<string, QueryValue>;
@@ -63,11 +63,17 @@ function isApiResponse(value: unknown): value is ApiResponse<unknown> {
 async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
   const hasBody = options.body !== undefined;
   const headers: Record<string, string> = { accept: "application/json" };
-  if (hasBody) headers["content-type"] = "application/json";
+  // FormData는 content-type을 직접 두지 않습니다. 브라우저가 multipart 경계(boundary)를 붙여 채웁니다.
+  const isForm = options.body instanceof FormData;
+  if (hasBody && !isForm) headers["content-type"] = "application/json";
 
   // 경로·본문 오류는 개발자 실수이므로 NETWORK_ERROR로 바꾸지 않고 그대로 던집니다.
   const url = buildUrl(path, options.query);
-  const payload = hasBody ? JSON.stringify(options.body) : undefined;
+  const payload = !hasBody
+    ? undefined
+    : isForm
+      ? (options.body as FormData)
+      : JSON.stringify(options.body);
 
   let response: Response;
   try {

@@ -511,6 +511,26 @@ describe("S04a 실패와 재시도", () => {
 });
 
 describe("S04a 이전 질문", () => {
+  it("말로 시작한 문진은 증상 단계의 첫 질문에서만 S04로 돌아간다", async () => {
+    const symptom = intake(1, { stage: "SYMPTOM" });
+    answerMock.mockResolvedValue(advanced(intake(1)));
+    backMock.mockResolvedValue(advanced(symptom));
+    const { questions, last, exits } = setup(symptom);
+
+    // 기본 정보의 1번 질문은 맨 처음이 아니므로 서버에 이전 질문을 요청합니다.
+    await questions.submit(buttonAnswer);
+    expect(last().intake.stage).toBe("BASIC_INFO");
+    await questions.back();
+    expect(backMock).toHaveBeenCalledTimes(1);
+    expect(exits).toEqual([]);
+    expect(last().intake.stage).toBe("SYMPTOM");
+
+    // 증상 단계의 1번 질문이 맨 처음이라 서버에 묻지 않고 돌아갑니다.
+    await questions.back();
+    expect(backMock).toHaveBeenCalledTimes(1);
+    expect(exits).toEqual(["text-input"]);
+  });
+
   it("첫 질문에서는 서버에 요청하지 않고 S04로 돌아가며 시작한 문진을 지운다", async () => {
     const { questions, exits } = setup(intake(1));
 

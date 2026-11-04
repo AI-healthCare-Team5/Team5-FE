@@ -87,6 +87,20 @@ describe("요청", () => {
     expect(init.body).toBe('{"inputMode":"BUTTON","bodyPart":"LEG_KNEE"}');
   });
 
+  it("FormData는 JSON으로 바꾸지 않고 content-type도 직접 정하지 않는다", async () => {
+    fetchMock.mockResolvedValueOnce(ok({ text: "가짜 문장" }));
+    const form = new FormData();
+    form.append("audio", new Blob(["가짜"], { type: "audio/webm" }), "a.webm");
+
+    await apiRequest("/stt", { method: "POST", body: form });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/stt");
+    // 직접 정하면 multipart 경계(boundary)가 빠져 서버가 파일을 읽지 못합니다.
+    expect(new Headers(init.headers).has("content-type")).toBe(false);
+    expect(init.body).toBe(form);
+  });
+
   it("본문이 없으면 GET으로 보내고 content-type을 붙이지 않는다", async () => {
     fetchMock.mockResolvedValueOnce(ok(null));
 

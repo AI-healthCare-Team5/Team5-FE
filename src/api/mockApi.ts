@@ -42,6 +42,7 @@ import type {
   SummaryUpdateRequest,
 } from "@/api/summaries";
 import type { RegionListResult } from "@/api/regions";
+import type { SttResult } from "@/api/stt";
 import type { CollectedList } from "@/api/types";
 
 const DATA_UPDATED_AT = "2026-11-04T04:00:00+09:00";
@@ -817,4 +818,30 @@ export function retrySummary(intakeId: string): SummaryRetryResult {
   record.failing = false;
   record.content = buildContent(intake);
   return { intakeId, summaryId: record.summaryId, status: "GENERATING" };
+}
+
+// ---- 음성 인식 ----
+
+// 녹음 내용을 알 수 없으니 문진이 처음부터 끝까지 이어지도록, 말하는 순서대로 가짜 문장을 돌려줍니다.
+// 증상 → 붓기 → 넘어짐 → 나이대 → 성별 → 복용약 → 앓는 병 → 알레르기 순서이고, 끝까지 가면 처음부터 다시 돕니다.
+const mockUtterances = [
+  "무릎이 사흘째 아파요",
+  "네",
+  "아니요",
+  "70대",
+  "여성",
+  "없어요",
+  "없어요",
+  "없어요",
+];
+let utteranceIndex = 0;
+
+// 서버처럼 파일이 비었으면 STT_400입니다. 형식·크기 검사는 서버 몫이라 따라 하지 않습니다.
+export function recognizeSpeech(audio: Blob): SttResult {
+  if (audio.size === 0) {
+    throw badRequest("STT_400", "audio", "필수 값이에요");
+  }
+  const text = mockUtterances[utteranceIndex % mockUtterances.length];
+  utteranceIndex += 1;
+  return { text, durationSec: 3.2 };
 }

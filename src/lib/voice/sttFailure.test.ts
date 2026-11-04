@@ -17,6 +17,7 @@ describe("getSttFailure", () => {
     [413, "too-large", false],
     [415, "use-text", true],
     [422, "not-understood", false],
+    [429, "use-text", true],
     [503, "use-text", true],
   ] as const)("STT_%i는 %s이고 글 입력 안내는 %s다", (status, kind, text) => {
     const failure = getSttFailure(sttError(status));
