@@ -47,7 +47,18 @@ describe("문진 기억", () => {
   it("시작한 문진을 읽을 수 있다", () => {
     beginIntakeSession(intake());
 
-    expect(readIntakeSession()).toEqual({ intake: intake(), answers: {} });
+    expect(readIntakeSession()).toEqual({
+      intake: intake(),
+      firstStage: "BASIC_INFO",
+      answers: {},
+    });
+  });
+
+  it("처음 받은 질문의 단계를 첫 단계로 기억하고, 문진이 진행돼도 바뀌지 않는다", () => {
+    beginIntakeSession(intake({ stage: "SYMPTOM" }));
+    updateIntakeSession(intake({ stage: "BASIC_INFO" }));
+
+    expect(readIntakeSession()?.firstStage).toBe("SYMPTOM");
   });
 
   it("서버가 알려 준 새 상태로 바꾼다", () => {
@@ -140,6 +151,7 @@ describe("문진 기억", () => {
 
     expect(readIntakeSession()).toEqual({
       intake: intake({ intakeId: "intake-2" }),
+      firstStage: "BASIC_INFO",
       answers: {},
     });
     expect(readSummarySession()).toBeNull();
