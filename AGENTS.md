@@ -55,27 +55,27 @@
 
 디자인 화면 ID와 라우트의 대응입니다. 미구현 경로는 담당 이슈에서 src/App.tsx에 추가합니다.
 
-| ID          | 화면                            | 경로                                       | 상태                                   |
-| ----------- | ------------------------------- | ------------------------------------------ | -------------------------------------- |
-| S01         | 시작                            | `/`                                        | 구현                                   |
-| S02 / S02a  | 마이크 안내 / 사용 불가         | `/mic-guide`, `/mic-guide/unavailable`     | 구현                                   |
-| S03         | 음성 문진                       | `/interview`                               | 버튼 문진 구현, 음성 미연결            |
-| S04 / S04a  | 글 입력 / 추가 질문             | `/text-input`, `/text-input/questions`     | 구현                                   |
-| S05a        | 위치 확인                       | `/location`                                | 구현                                   |
-| S05b        | 지역 선택                       | `/region`                                  | 미구현 (#33)                           |
-| S05         | 병원 안내                       | `/hospitals`                               | 구현, 가짜 응답은 mock에서만 (API #26) |
-| S05c / S05d | 근처 병원 없음 / 병원 정보 오류 | `/hospital-empty`, `/hospital-error`       | 구현                                   |
-| S06a        | 요약지 만드는 중                | `/summary-loading`                         | 구현                                   |
-| S06         | 요약지                          | `/summary`                                 | 구현, 샘플 요약지 (API 미연결)         |
-| E01         | 응급 전환                       | `/emergency`                               | 구현                                   |
-| E02         | 응급 카드                       | `/emergency-card`                          | 미구현 (#30)                           |
-| E03         | 보호자 연락처 등록              | `/guardian`                                | 미구현 (#31)                           |
-| C01         | 보호자 저장 동의                | `/guardian-consent?from=guardian\|my-info` | 구현                                   |
-| P01         | 내 정보                         | `/my-info`                                 | 계정 영역만 구현 (본문 #32)            |
-| L01 / L01a  | 로그인 / 실패                   | `/login`, `/login/failed`                  | 구현                                   |
-| —           | 카카오 콜백                     | `/auth/kakao/callback`                     | 구현                                   |
-| C02         | 기록 저장 동의                  | `/record-consent`                          | 구현                                   |
-| H01 / H02   | 내 기록 / 기록 상세             | `/records`, `/records/:id`                 | 화면 구현, 기록 API 미연결             |
+| ID          | 화면                            | 경로                                       | 상태                             |
+| ----------- | ------------------------------- | ------------------------------------------ | -------------------------------- |
+| S01         | 시작                            | `/`                                        | 구현                             |
+| S02 / S02a  | 마이크 안내 / 사용 불가         | `/mic-guide`, `/mic-guide/unavailable`     | 구현                             |
+| S03         | 음성 문진                       | `/interview`                               | 버튼 문진 구현, 음성 미연결      |
+| S04 / S04a  | 글 입력 / 추가 질문             | `/text-input`, `/text-input/questions`     | 구현                             |
+| S05a        | 위치 확인                       | `/location`                                | 구현                             |
+| S05b        | 지역 선택                       | `/region`                                  | 미구현 (#33)                     |
+| S05         | 병원 안내                       | `/hospitals`                               | 구현, 진료과·병원 API 연결 (#26) |
+| S05c / S05d | 근처 병원 없음 / 병원 정보 오류 | `/hospital-empty`, `/hospital-error`       | 구현                             |
+| S06a        | 요약지 만드는 중                | `/summary-loading`                         | 구현                             |
+| S06         | 요약지                          | `/summary`                                 | 구현, 요약지 API 연결 (#26)      |
+| E01         | 응급 전환                       | `/emergency`                               | 구현                             |
+| E02         | 응급 카드                       | `/emergency-card`                          | 미구현 (#30)                     |
+| E03         | 보호자 연락처 등록              | `/guardian`                                | 미구현 (#31)                     |
+| C01         | 보호자 저장 동의                | `/guardian-consent?from=guardian\|my-info` | 구현                             |
+| P01         | 내 정보                         | `/my-info`                                 | 계정 영역만 구현 (본문 #32)      |
+| L01 / L01a  | 로그인 / 실패                   | `/login`, `/login/failed`                  | 구현                             |
+| —           | 카카오 콜백                     | `/auth/kakao/callback`                     | 구현                             |
+| C02         | 기록 저장 동의                  | `/record-consent`                          | 구현                             |
+| H01 / H02   | 내 기록 / 기록 상세             | `/records`, `/records/:id`                 | 화면 구현, 기록 API 미연결       |
 
 ## API 규칙
 
@@ -93,7 +93,7 @@
 
 - 앱 상태는 src/stores/appStore.ts의 `useAppStore()`와 `appActions`로 다룹니다. 문진 답변은 `appActions.answer(key, value)`로 저장합니다.
 - src/stores/model.ts의 `Interview`, `SummaryData`는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. API를 연결하면 src/api의 타입에서 변환합니다.
-- 문진·로그인·기록 상태는 메모리에만 둡니다. 로컬 저장소에는 글자 크기만, sessionStorage에는 카카오 로그인 복귀 정보(loginIntent)만 저장합니다. 저장소 접근은 try/catch로 감쌉니다.
+- 문진·로그인·기록 상태는 메모리에만 둡니다. 로컬 저장소에는 글자 크기만, sessionStorage에는 카카오 로그인 복귀 정보(loginIntent)와 진행 중인 문진·요약지 ID(summarySession)만 저장합니다. 증상·진료과 같은 문진 내용은 저장하지 않습니다. 저장소 접근은 try/catch로 감쌉니다.
 - 로그인이 필요한 화면으로 보내기 전에는 `appActions.prepareLogin(returnTo, saveTarget)`을 호출해 로그인 후 돌아올 화면을 기억합니다.
 
 ## 개인정보와 문구

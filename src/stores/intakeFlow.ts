@@ -1,44 +1,9 @@
-import type {
-  AnswerType,
-  IntakeStage,
-  IntakeStatus,
-  YesNoUnknown,
-} from "@/api/enums";
+import type { YesNoUnknown } from "@/api/enums";
+import type { IntakeOption, IntakeQuestion } from "@/api/intakes";
 
-// 문진 응답(POST /api/intakes, GET·POST /api/intakes/{intakeId}…) 중 S04a가 그리는 필드입니다.
-// 실제 API 함수와 src/api의 타입은 #26에서 연결합니다.
-export interface IntakeOption {
-  // BUTTON으로 답할 때 answer에 넣는 값입니다.
-  code: string;
-  label: string;
-}
-
-export interface IntakeQuestion {
-  // 답변할 때 그대로 보냅니다.
-  questionId: string;
-  text: string;
-  answerType: AnswerType;
-  // SINGLE_CHOICE일 때만 있고 그 외에는 null입니다.
-  options: IntakeOption[] | null;
-}
-
-// stage마다 1부터 다시 셉니다. SYMPTOM은 최대 7, BASIC_INFO는 5입니다.
-export interface IntakeProgress {
-  current: number;
-  total: number;
-}
-
-export interface IntakeView {
-  status: IntakeStatus;
-  stage: IntakeStage;
-  progress: IntakeProgress;
-  // 지금까지 모은 정보입니다. 화면 상단에 보여 줍니다.
-  collected: string[];
-  // EMERGENCY·COMPLETED면 null입니다.
-  question: IntakeQuestion | null;
-  // 못 알아들어 같은 질문을 다시 묻는 중이면 true입니다.
-  reask: boolean;
-}
+// S04a가 문진 응답(POST /api/intakes, GET·POST /api/intakes/{intakeId}…)의 질문을 그릴 때 쓰는 도우미입니다.
+// 응답의 모양은 src/api/intakes.ts의 타입을 그대로 씁니다.
+export type { IntakeOption, IntakeQuestion };
 
 // YES_NO_UNKNOWN 질문은 options가 null이라 버튼 문구를 화면에서 정합니다. S03의 선택지와 같은 문구입니다.
 const yesNoUnknownOptions: { code: YesNoUnknown; label: string }[] = [

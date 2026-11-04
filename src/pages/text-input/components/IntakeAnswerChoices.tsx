@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { DesignIcon } from "@/components/DesignIcon";
-import { Button, Chip, Notice } from "@/components/ui";
+import { ReaskNotice } from "@/components/ReaskNotice";
+import { Button, Chip } from "@/components/ui";
 import {
   answerChoices,
   type IntakeOption,
@@ -13,6 +13,7 @@ export function IntakeAnswerChoices({
   question,
   reask,
   last,
+  busy = false,
   initialCode = null,
   onSubmit,
 }: {
@@ -21,6 +22,8 @@ export function IntakeAnswerChoices({
   reask: boolean;
   // 마지막 질문이면 버튼 문구를 "답변 마치기"로 바꿉니다.
   last: boolean;
+  // 답변 요청이 진행 중이면 선택지와 버튼을 잠급니다.
+  busy?: boolean;
   // 이전 질문으로 돌아왔을 때 직전에 고른 답을 다시 보여 줍니다.
   initialCode?: string | null;
   onSubmit: (choice: IntakeOption) => void;
@@ -30,16 +33,7 @@ export function IntakeAnswerChoices({
   const selected = choices.find((choice) => choice.code === selectedCode);
   return (
     <>
-      <div role="status">
-        {reask && (
-          <Notice tone="amber">
-            <span className="flex items-start gap-3">
-              <DesignIcon name="info" size={20} />
-              <span>다시 말씀해 주세요</span>
-            </span>
-          </Notice>
-        )}
-      </div>
+      <ReaskNotice show={reask} />
       {/* Figma S03처럼 2열로 놓고, 선택지가 홀수면(네·아니요·잘 모르겠어요) 마지막 하나가 한 줄을 채웁니다. */}
       <ul className="grid grid-cols-2 gap-[10px]">
         {choices.map((choice, index) => (
@@ -49,6 +43,7 @@ export function IntakeAnswerChoices({
           >
             <Chip
               selected={choice.code === selectedCode}
+              disabled={busy}
               onClick={() => setSelectedCode(choice.code)}
             >
               {choice.label}
@@ -57,7 +52,8 @@ export function IntakeAnswerChoices({
         ))}
       </ul>
       <Button
-        disabled={!selected}
+        disabled={!selected || busy}
+        aria-busy={busy}
         onClick={() => {
           if (selected) {
             onSubmit(selected);

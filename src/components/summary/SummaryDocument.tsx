@@ -1,6 +1,6 @@
 import { Disclaimer } from "@/components/ui";
 import { buildSummaryRows } from "@/components/summary/summaryRows";
-import type { SummaryContent } from "@/components/summary/types";
+import type { SummaryContent } from "@/api/summaries";
 
 // S06 요약지와 H02 기록 상세가 함께 씁니다. 데이터와 머리말 문구만 props로 받습니다.
 export function SummaryDocument({

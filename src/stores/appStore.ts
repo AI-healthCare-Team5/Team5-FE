@@ -1,22 +1,17 @@
 import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
+import type { SummaryContent } from "@/api/summaries";
 import { createSampleRecords } from "@/stores/fixtures";
-import type { IntakeStartRequest } from "@/stores/intakeStart";
+import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
   readLoginIntent,
   type LoginIntent,
   type SaveTarget,
 } from "@/stores/loginIntent";
-import {
-  createSummary,
-  type Interview,
-  type SavedRecord,
-} from "@/stores/model";
+import type { Interview, SavedRecord } from "@/stores/model";
 
 interface AppState {
   interview: Interview;
-  // S04에서 "다음"을 누를 때 만든 문진 시작 요청입니다. 실제 호출은 #26에서 연결합니다.
-  intakeStart: IntakeStartRequest | null;
   loggedIn: boolean;
   nickname: string;
   recordConsent: boolean;
@@ -33,7 +28,6 @@ const loginIntent = readLoginIntent();
 
 const initialState: AppState = {
   interview: {},
-  intakeStart: null,
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,
@@ -71,15 +65,13 @@ export const appActions = {
   answer(key: keyof Interview, value: string) {
     update({ interview: { ...state.interview, [key]: value } });
   },
+  // 흐름을 처음부터 다시 시작하는 곳(S01의 시작 버튼)에서 부릅니다. 이전 문진과 요약지 ID도 함께 지웁니다.
   startInterview() {
+    resetIntakeFlow();
     update({
       interview: { ...initialState.interview },
-      intakeStart: null,
       summarySaved: false,
     });
-  },
-  prepareIntake(request: IntakeStartRequest) {
-    update({ intakeStart: request });
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });
@@ -109,14 +101,26 @@ export const appActions = {
     }
     update({ recordConsent: true });
   },
-  saveSummary() {
-    if (!state.loggedIn || !state.recordConsent) {
+  // 보관할 요약지는 S06이 갖고 있어서 인자로 받습니다.
+  // 동의 화면(C02)처럼 요약지를 모르는 곳이 인자 없이 부르면 보관하지 않고,
+  // 동의 뒤 S06으로 돌아왔을 때 S06이 saveTarget을 보고 보관합니다.
+  // 같은 요약지를 두 번 보관하지 않습니다(StrictMode의 effect 두 번 실행 포함).
+  // 기록 저장 API(#29)가 연결되기 전까지 실제 경로에서는 보관하지 않습니다.
+  // 메모리에만 남는 기록을 저장 성공으로 보여 주지 않으려는 것이고, 로그인 복귀 후 자동 보관도 여기서 막힙니다.
+  saveSummary(summary?: SummaryContent) {
+    if (
+      !isMockApi ||
+      !summary ||
+      !state.loggedIn ||
+      !state.recordConsent ||
+      state.summarySaved
+    ) {
       return;
     }
     const record: SavedRecord = {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      summary: createSummary(state.interview),
+      summary,
     };
     update({ records: [record, ...state.records], summarySaved: true });
   },

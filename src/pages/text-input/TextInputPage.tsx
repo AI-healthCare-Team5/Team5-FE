@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
+import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Chip, Notice, PageTitle } from "@/components/ui";
+import { beginButtonIntake } from "@/pages/text-input/beginIntake";
 import { appActions, useAppStore } from "@/stores/appStore";
 import {
   bodyPartOptions,
@@ -12,6 +15,40 @@ export function TextInputPage() {
   const { interview } = useAppStore();
   const navigate = useNavigate();
   const intakeRequest = createButtonIntakeRequest(interview);
+  const [starting, setStarting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  // 같은 순간에 두 번 눌러도 문진을 한 번만 시작하도록 state와 별개로 기억합니다.
+  const startingRef = useRef(false);
+  const requestRef = useRef<AbortController | null>(null);
+
+  // 화면을 떠나면 진행 중인 시작 요청을 취소합니다.
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  async function start() {
+    if (!intakeRequest || startingRef.current) {
+      return;
+    }
+    startingRef.current = true;
+    const request = new AbortController();
+    requestRef.current = request;
+    setStarting(true);
+    setMessage(null);
+    try {
+      const result = await beginButtonIntake(intakeRequest, request.signal);
+      if (result.kind === "started") {
+        navigate("/text-input/questions");
+      } else if (result.kind === "emergency") {
+        navigate("/emergency");
+      } else if (result.kind === "failed") {
+        setMessage(result.message);
+      }
+    } finally {
+      startingRef.current = false;
+      if (!request.signal.aborted) {
+        setStarting(false);
+      }
+    }
+  }
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -94,15 +131,11 @@ export function TextInputPage() {
         <p className="text-center text-[0.889rem] text-muted">
           다음 화면에서 나이, 복용약 등 몇 가지만 더 여쭤볼게요.
         </p>
+        {message && <WarningNotice>{message}</WarningNotice>}
         <Button
-          disabled={!intakeRequest}
-          onClick={() => {
-            if (!intakeRequest) {
-              return;
-            }
-            appActions.prepareIntake(intakeRequest);
-            navigate("/text-input/questions");
-          }}
+          disabled={!intakeRequest || starting}
+          aria-busy={starting}
+          onClick={() => void start()}
         >
           다음
         </Button>

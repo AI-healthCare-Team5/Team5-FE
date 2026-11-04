@@ -1,44 +1,67 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
-import { isMockApi } from "@/api/client";
 import type { IntakeStage } from "@/api/enums";
-import { ActionLink, Button, PageTitle, Progress } from "@/components/ui";
+import { WarningNotice } from "@/components/WarningNotice";
+import { ActionLink, Button, Progress } from "@/components/ui";
 import { IntakeAnswerChoices } from "@/pages/text-input/components/IntakeAnswerChoices";
+import { IntakeAnswerText } from "@/pages/text-input/components/IntakeAnswerText";
 import {
-  initialQuestionAnswers,
-  questionAnswersReducer,
-} from "@/pages/text-input/questionAnswers";
-import { appActions, useAppStore } from "@/stores/appStore";
-import type { IntakeOption } from "@/stores/intakeFlow";
-import {
-  createSampleIntakeView,
-  sampleInterviewKey,
-} from "@/stores/sampleIntake";
+  canShowIntake,
+  createIntakeQuestions,
+  initialQuestionsView,
+  type IntakeQuestions,
+  type IntakeQuestionsExit,
+} from "@/pages/text-input/intakeQuestions";
+import { readIntakeSession, type IntakeSession } from "@/stores/intakeSession";
 
 const stageLabels: Record<IntakeStage, string> = {
   SYMPTOM: "증상 확인",
   BASIC_INFO: "기본 정보",
 };
 
+const exitPaths: Record<IntakeQuestionsExit, string> = {
+  "text-input": "/text-input",
+  emergency: "/emergency",
+  start: "/",
+};
+
 // S04a는 서버가 보낸 질문(question)·진행(progress)·모은 정보(collected)를 그대로 그립니다.
-// 문진 API(#26) 연결 전까지는 가짜 응답(VITE_API_MOCK)에서만 같은 모양의 가짜 응답(sampleIntake)을 쓰고,
-// 실제 경로에서는 문진을 끝까지 진행하지 않도록 준비 중으로 보여 줍니다.
+// 문진은 S04에서 "다음"을 누를 때 시작해 메모리에 기억해 둡니다. 새로고침이나 주소로 바로 들어오면 없으므로 S04부터 다시 시작합니다.
 export function TextInputQuestionsPage() {
-  const { intakeStart } = useAppStore();
+  const [session] = useState(readIntakeSession);
+  if (!canShowIntake(session)) {
+    return <Navigate to="/text-input" replace />;
+  }
+  return <IntakeQuestionsScreen session={session} />;
+}
+
+// 답변·이전 질문 요청과 이동은 intakeQuestions.ts가 맡습니다. 화면을 떠나면 진행 중인 요청을 취소합니다.
+function IntakeQuestionsScreen({ session }: { session: IntakeSession }) {
   const navigate = useNavigate();
-  const [{ answers, restoredCode }, dispatch] = useReducer(
-    questionAnswersReducer,
-    initialQuestionAnswers,
-  );
-  const intake =
-    intakeStart && isMockApi
-      ? createSampleIntakeView(intakeStart, answers)
-      : null;
+  const [view, setView] = useState(() => initialQuestionsView(session));
+  const questionsRef = useRef<IntakeQuestions | null>(null);
+
+  useEffect(() => {
+    const questions = createIntakeQuestions(session, {
+      onView: setView,
+      onExit: (to) => navigate(exitPaths[to], { replace: true }),
+    });
+    questionsRef.current = questions;
+    return () => {
+      questions.dispose();
+      questionsRef.current = null;
+    };
+  }, [session, navigate]);
+
+  const { intake, busy, message, restored } = view;
+  const { question } = intake;
+  const complete = intake.status === "COMPLETED";
+  const { current, total } = intake.progress;
+
   const headingRef = useRef<HTMLHeadingElement>(null);
   // 질문이 바뀌어도 주소는 그대로라, 바뀐 질문 제목으로 직접 포커스를 옮깁니다.
   // 처음 그릴 때는 AppShell이 h1에 포커스를 줍니다.
-  const focusKey =
-    intake?.status === "COMPLETED" ? "complete" : intake?.question?.questionId;
+  const focusKey = complete ? "complete" : question?.questionId;
   const shownFocusKey = useRef(focusKey);
   useEffect(() => {
     if (shownFocusKey.current === focusKey) {
@@ -51,45 +74,6 @@ export function TextInputQuestionsPage() {
       heading.focus({ preventScroll: true });
     }
   }, [focusKey]);
-  // 새로고침이나 주소로 바로 들어와 S04에서 만든 시작 요청이 없으면 S04부터 다시 시작합니다.
-  if (!intakeStart) {
-    return <Navigate to="/text-input" replace />;
-  }
-  if (!intake) {
-    return (
-      <>
-        <PageTitle description="문진 서버를 연결한 뒤에 질문에 답할 수 있어요.">
-          질문을 준비 중이에요
-        </PageTitle>
-        <div className="flex flex-col gap-3">
-          <ActionLink to="/text-input">이전 화면으로</ActionLink>
-          <ActionLink to="/" variant="quiet">
-            처음으로
-          </ActionLink>
-        </div>
-      </>
-    );
-  }
-  const { question } = intake;
-  const complete = intake.status === "COMPLETED";
-  const { current, total } = intake.progress;
-
-  function submit(questionId: string, choice: IntakeOption) {
-    const interviewKey = sampleInterviewKey(questionId);
-    if (interviewKey) {
-      appActions.answer(interviewKey, choice.label);
-    }
-    dispatch({ type: "answer", questionId, choice });
-  }
-
-  // 첫 질문에서는 S04로 돌아가 부위·시작 시점을 다시 고르게 합니다.
-  function goBack() {
-    if (answers.length === 0) {
-      navigate("/text-input");
-      return;
-    }
-    dispatch({ type: "back" });
-  }
 
   return (
     <>
@@ -136,21 +120,50 @@ export function TextInputQuestionsPage() {
             <ActionLink to="/location">병원 안내 보기</ActionLink>
           </>
         ) : (
-          question && (
+          question &&
+          (question.answerType === "FREE_TEXT" ? (
+            <IntakeAnswerText
+              key={question.questionId}
+              question={question}
+              reask={intake.reask}
+              last={current === total}
+              busy={busy}
+              initialText={restored?.answer ?? ""}
+              onSubmit={(text) =>
+                void questionsRef.current?.submit({
+                  inputMode: "TEXT",
+                  answer: text,
+                })
+              }
+            />
+          ) : (
             <IntakeAnswerChoices
               key={question.questionId}
               question={question}
               reask={intake.reask}
               last={current === total}
-              initialCode={restoredCode}
-              onSubmit={(choice) => submit(question.questionId, choice)}
+              busy={busy}
+              initialCode={
+                restored?.inputMode === "BUTTON" ? restored.answer : null
+              }
+              onSubmit={(choice) =>
+                void questionsRef.current?.submit({
+                  inputMode: "BUTTON",
+                  answer: choice.code,
+                })
+              }
             />
-          )
+          ))
         )}
+        {message && <WarningNotice>{message}</WarningNotice>}
       </div>
       {/* 끝난 문진은 서버에서 이전 질문으로 돌아갈 수 없습니다(INTAKE_409). */}
       {!complete && (
-        <Button variant="quiet" onClick={goBack}>
+        <Button
+          variant="quiet"
+          disabled={busy}
+          onClick={() => void questionsRef.current?.back()}
+        >
           ← 이전 질문
         </Button>
       )}

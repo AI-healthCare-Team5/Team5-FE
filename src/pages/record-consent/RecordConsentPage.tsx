@@ -43,9 +43,7 @@ export function RecordConsentPage() {
       return;
     }
     appActions.agreeToRecords();
-    if (returnTo === "/summary") {
-      appActions.saveSummary();
-    }
+    // 동의 뒤 S06으로 돌아오면 S06이 보관하려던 요약지를 보관합니다(saveAfterReturn).
     navigate(returnTo);
   }
   return (

@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
+import type { SummaryContent } from "@/api/summaries";
+import type { FieldError } from "@/api/types";
 import { NONE_TEXT, UNCHECKED_TEXT } from "@/api/values";
-import { Button, Card } from "@/components/ui";
-import type { SummaryContent } from "@/components/summary/types";
+import { Button, Card, Notice } from "@/components/ui";
 import {
   canSaveEdits,
   healthKeys,
@@ -136,12 +137,22 @@ function HealthField({
 }
 
 // 안내된 진료과는 고칠 수 없어서 읽기만 합니다.
+// 저장이 실패하면 이 컴포넌트가 그대로 남아 있어 입력값이 유지됩니다. 호출한 쪽은 error만 넘기면 됩니다.
 export function SummaryEditForm({
   summary,
+  saving,
+  error = null,
+  fieldErrors = [],
   onSave,
   onCancel,
 }: {
   summary: SummaryContent;
+  // 저장 요청 중이면 버튼을 잠가 두 번 보내지 않게 합니다.
+  saving: boolean;
+  // 저장이 실패했을 때 서버가 알려 준 문장입니다.
+  error?: string | null;
+  // 400 응답의 항목별 이유입니다. 비어 있을 수 있습니다.
+  fieldErrors?: FieldError[];
   onSave: (edits: SummaryEdits) => void;
   onCancel: () => void;
 }) {
@@ -213,10 +224,28 @@ export function SummaryEditForm({
         </dd>
       </dl>
       <div className="flex flex-col gap-3">
-        <Button disabled={!canSave} onClick={() => onSave(edits)}>
+        {error && (
+          <div role="alert">
+            <Notice tone="amber">
+              <p>{error}</p>
+              {fieldErrors.length > 0 && (
+                <ul className="mt-2 list-disc pl-5">
+                  {fieldErrors.map((item, index) => (
+                    <li key={`${item.field}-${index}`}>{item.reason}</li>
+                  ))}
+                </ul>
+              )}
+            </Notice>
+          </div>
+        )}
+        <Button
+          disabled={!canSave || saving}
+          aria-busy={saving}
+          onClick={() => onSave(edits)}
+        >
           저장하기
         </Button>
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" disabled={saving} onClick={onCancel}>
           취소
         </Button>
       </div>

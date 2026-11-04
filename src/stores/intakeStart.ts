@@ -15,7 +15,7 @@ export interface ButtonIntakeStartRequest {
   text?: string;
 }
 
-// POST /api/intakes 요청 본문입니다. 실제 호출과 src/api의 타입은 #26에서 연결합니다.
+// POST /api/intakes 요청 본문입니다. src/api/intakes.ts의 IntakeStartRequest에 그대로 넘길 수 있습니다.
 // inputMode로 필수 필드를 나눠, 필수 값이 빠진 요청은 타입 검사에서 막습니다.
 export type IntakeStartRequest =
   FreeIntakeStartRequest | ButtonIntakeStartRequest;
