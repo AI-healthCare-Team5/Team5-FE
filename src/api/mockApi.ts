@@ -16,6 +16,7 @@ import {
 } from "@/api/enums";
 import { ApiError } from "@/api/errors";
 import type {
+  EmergencyRoomParams,
   HealthCenterResult,
   Hospital,
   HospitalDepartment,
@@ -33,6 +34,7 @@ import type {
   IntakeStartRequest,
 } from "@/api/intakes";
 import type {
+  EmergencyCardResponse,
   HealthInfoItem,
   SummaryConfirmResult,
   SummaryContent,
@@ -197,6 +199,50 @@ const mockHealthCenter: Hospital = {
   },
 };
 
+// 응급실은 항상 24시간으로 내려옵니다.
+const mockEmergencyRooms: Hospital[] = [
+  {
+    hospitalId: 301,
+    name: "OO대학교병원 응급의료센터",
+    hospitalType: "11",
+    hospitalTypeName: "종합병원",
+    departments: [{ departmentCode: "24", departmentName: "응급의학과" }],
+    distanceKm: 4.8,
+    latitude: 37.7105,
+    longitude: 127.9021,
+    phoneNumber: "033-000-0000",
+    address: "강원특별자치도 OO시 OO로 00",
+    hasEmergencyRoom: true,
+    today: {
+      isOpen: true,
+      is24Hours: true,
+      openTime: "00:00",
+      closeTime: "23:59",
+      nextOpenAt: null,
+    },
+  },
+  {
+    hospitalId: 302,
+    name: "△△병원 응급실",
+    hospitalType: "21",
+    hospitalTypeName: "병원",
+    departments: [{ departmentCode: "24", departmentName: "응급의학과" }],
+    distanceKm: 12.6,
+    latitude: 37.7801,
+    longitude: 127.9502,
+    phoneNumber: "033-000-0000",
+    address: "강원특별자치도 △△시 △△로 00",
+    hasEmergencyRoom: true,
+    today: {
+      isOpen: true,
+      is24Hours: true,
+      openTime: "00:00",
+      closeTime: "23:59",
+      nextOpenAt: null,
+    },
+  },
+];
+
 // 서버처럼 위치(latitude·longitude)와 지역(regionCode)이 모두 없으면 location 오류를 냅니다.
 function requireLocation(params: HospitalLocationParams) {
   const hasPoint =
@@ -207,7 +253,7 @@ function requireLocation(params: HospitalLocationParams) {
   });
 }
 
-// 서버처럼 radius(정수, 1~30)와 limit(정수, 1~20)이 범위를 벗어나면 해당 field로 오류를 냅니다.
+// 서버처럼 radius와 limit이 정수 범위를 벗어나면 해당 field로 오류를 냅니다.
 // 실제 서버 경로에서는 검증하지 않고 서버가 판단합니다.
 function requireIntegerInRange(
   field: string,
@@ -245,6 +291,25 @@ export function getNearestHealthCenter(
   return {
     dataUpdatedAt: DATA_UPDATED_AT,
     hospital: structuredClone(mockHealthCenter),
+  };
+}
+
+export function getEmergencyRooms(
+  params: EmergencyRoomParams,
+  radius: number,
+  limit: number,
+): HospitalSearchResult {
+  requireLocation(params);
+  requireIntegerInRange("radius", radius, 1, 50);
+  requireIntegerInRange("limit", limit, 1, 10);
+  const inRadius = mockEmergencyRooms.filter(
+    (item) => item.distanceKm <= radius,
+  );
+  return {
+    radiusKm: radius,
+    dataUpdatedAt: DATA_UPDATED_AT,
+    totalCount: inRadius.length,
+    hospitals: structuredClone(inRadius.slice(0, limit)),
   };
 }
 
@@ -607,6 +672,25 @@ function buildContent(intake: MockIntake): SummaryContent {
     items,
     department: { ...mockDepartment },
     isConfirmed: false,
+  };
+}
+
+// 가짜 문진에는 응급 전환 흐름이 없어 서버의 SUMMARY_404·409 없이 어떤 문진 ID든 샘플을 돌려줍니다.
+// 건강 정보의 세 상태(null, [], 항목 있음)를 한 화면에서 확인할 수 있게 채웁니다.
+export function getEmergencyCard(intakeId: string): EmergencyCardResponse {
+  return {
+    intakeId,
+    createdAt: SUMMARY_CREATED_AT,
+    userUtterance: "가슴이 답답해요",
+    redFlagCategory: "CHEST_PAIN",
+    mainSymptom: "가슴 답답함",
+    onsetDetail: "오늘",
+    ageGroup: "SEVENTIES",
+    gender: "FEMALE",
+    medications: [{ name: "OO약", detail: null }],
+    conditions: [],
+    allergies: null,
+    guardian: { relation: "DAUGHTER", phoneNumber: "010-0000-0000" },
   };
 }
 

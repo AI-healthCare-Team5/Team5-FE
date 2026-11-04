@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
+import { requestCurrentPosition } from "@/components/map/currentPosition";
+import type { CurrentLocation, EmergencyEntry } from "@/stores/emergency";
 import { createSampleRecords } from "@/stores/fixtures";
 import {
   readLoginIntent,
@@ -14,6 +16,9 @@ import {
 
 interface AppState {
   interview: Interview;
+  // 문진 응답이 응급 전환이면 채웁니다. URL로 바로 들어오면 null이고 E01은 119 안내만 보여 줍니다.
+  emergency: EmergencyEntry | null;
+  currentLocation: CurrentLocation;
   loggedIn: boolean;
   nickname: string;
   recordConsent: boolean;
@@ -30,6 +35,8 @@ const loginIntent = readLoginIntent();
 
 const initialState: AppState = {
   interview: {},
+  emergency: null,
+  currentLocation: { status: "unasked" },
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,
@@ -54,8 +61,13 @@ function subscribe(listener: () => void) {
   };
 }
 
+export function getAppState() {
+  return state;
+}
+
 export function useAppStore() {
-  return useSyncExternalStore(subscribe, () => state);
+  // 세 번째 인자는 테스트의 renderToStaticMarkup처럼 서버 렌더링으로 그릴 때 씁니다.
+  return useSyncExternalStore(subscribe, getAppState, getAppState);
 }
 
 export const appActions = {
@@ -63,7 +75,34 @@ export const appActions = {
     update({ interview: { ...state.interview, [key]: value } });
   },
   startInterview() {
-    update({ interview: { ...initialState.interview }, summarySaved: false });
+    update({
+      interview: { ...initialState.interview },
+      emergency: null,
+      currentLocation: initialState.currentLocation,
+      summarySaved: false,
+    });
+  },
+  // 문진 응답이 응급 전환이면 E01로 보내기 전에 부릅니다.
+  enterEmergency(entry: EmergencyEntry) {
+    update({ emergency: entry });
+  },
+  // 위치가 없을 때 한 번만 묻습니다. 거부했거나 받지 못했으면 다시 묻지 않습니다.
+  askCurrentLocationOnce() {
+    if (state.currentLocation.status !== "unasked") {
+      return;
+    }
+    update({ currentLocation: { status: "asking" } });
+    void requestCurrentPosition().then((location) => {
+      // 묻는 동안 새 문진을 시작했으면 결과를 쓰지 않습니다.
+      if (state.currentLocation.status !== "asking") {
+        return;
+      }
+      update({
+        currentLocation: location
+          ? { status: "found", location }
+          : { status: "unavailable" },
+      });
+    });
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });

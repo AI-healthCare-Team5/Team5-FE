@@ -5,6 +5,8 @@ import type {
   Gender,
   InputMode,
   Onset,
+  RedFlagCategory,
+  Relation,
   SummaryStatus,
   SummaryStep,
   SummaryStepStatus,
@@ -113,6 +115,29 @@ export type DoneSummaryResponse = SummaryResponse & {
   summary: SummaryContent;
 };
 
+// 로그인하고 보호자를 등록한 경우에만 옵니다. 응급 카드는 전화번호를 가리지 않고 줍니다.
+export interface EmergencyCardGuardian {
+  relation: Relation;
+  phoneNumber: string;
+}
+
+export interface EmergencyCardResponse {
+  intakeId: string;
+  createdAt: IsoDateTime;
+  userUtterance: string;
+  redFlagCategory: RedFlagCategory;
+  // 기본 정보를 묻기 전에도 응급으로 전환되므로 아래 항목은 못 물었으면 null("확인 못 했어요")입니다.
+  mainSymptom: string | null;
+  onsetDetail: string | null;
+  ageGroup: AgeGroup | null;
+  gender: Gender | null;
+  // 건강 정보: null은 "확인 못 했어요", []는 "없음"입니다.
+  medications: CollectedList<HealthInfoItem>;
+  conditions: CollectedList<HealthInfoItem>;
+  allergies: CollectedList<HealthInfoItem>;
+  guardian: EmergencyCardGuardian | null;
+}
+
 // 폴링 결과입니다. 호출한 쪽이 kind로 화면을 고릅니다.
 export type SummaryPollResult =
   // 요약지가 만들어졌습니다. summary.summary에 내용이 있습니다.
@@ -199,6 +224,21 @@ export async function retrySummary(
   return apiRequest<SummaryRetryResult>(
     `/intakes/${encodeURIComponent(intakeId)}/summary`,
     { method: "POST", signal },
+  );
+}
+
+// 응급 카드를 조회합니다. 응급으로 전환되지 않은 문진은 SUMMARY_409입니다.
+export async function getEmergencyCard(
+  intakeId: string,
+  signal?: AbortSignal,
+): Promise<EmergencyCardResponse> {
+  if (isMockApi) {
+    signal?.throwIfAborted();
+    return mock.getEmergencyCard(intakeId);
+  }
+  return apiRequest<EmergencyCardResponse>(
+    `/intakes/${encodeURIComponent(intakeId)}/emergency-card`,
+    { signal },
   );
 }
 

@@ -11,6 +11,8 @@ import type { IsoDateTime, TimeOfDay } from "@/api/types";
 
 export const HOSPITAL_RADIUS_DEFAULT_KM = 10;
 export const HOSPITAL_LIMIT_DEFAULT = 3;
+export const EMERGENCY_ROOM_RADIUS_DEFAULT_KM = 30;
+export const EMERGENCY_ROOM_LIMIT_DEFAULT = 2;
 
 // 병원이 가진 진료과입니다. 추천 이유는 문진 결과에만 있어서 보통 오지 않습니다.
 export interface HospitalDepartment extends Pick<
@@ -67,6 +69,13 @@ export interface HospitalSearchParams extends HospitalLocationParams {
   limit?: number;
 }
 
+export interface EmergencyRoomParams extends HospitalLocationParams {
+  // 검색 반경 km입니다. 생략하면 30km입니다. 최대 50이고, 벗어나면 서버가 HOSPITAL_400을 던집니다.
+  radius?: number;
+  // 가져올 응급실 수입니다. 생략하면 2곳입니다. 최대 10이고, 벗어나면 서버가 HOSPITAL_400을 던집니다.
+  limit?: number;
+}
+
 export interface HospitalSearchResult {
   radiusKm: number;
   // 마지막 공공데이터 동기화 시각입니다("공공데이터 기준 · 갱신일").
@@ -93,6 +102,16 @@ export type HospitalSearchOutcome =
   | { kind: "needsRegion"; error: ApiError }
   // 공공데이터 조회 실패(HOSPITAL_500)입니다. 오류 화면(S05d)입니다.
   | { kind: "error"; error: ApiError };
+
+// 위치와 지역이 모두 없어 받은 오류인지 봅니다(HOSPITAL_400, field = location).
+// errors가 비어 있을 수 있어 field로 찾습니다. 다른 field의 400은 여기에 해당하지 않습니다.
+export function isLocationRequiredError(error: unknown): boolean {
+  return (
+    isApiError(error) &&
+    error.code === "HOSPITAL_400" &&
+    getFieldErrors(error).some((item) => item.field === "location")
+  );
+}
 
 // 병원을 가까운 순으로 찾습니다.
 // 위 네 가지 말고는 모두 ApiError를 그대로 던집니다(location이 아닌 HOSPITAL_400, HOSPITAL_429,
@@ -125,11 +144,7 @@ export async function searchHospitals(
   } catch (error) {
     if (!isApiError(error)) throw error;
     if (error.code === "HOSPITAL_500") return { kind: "error", error };
-    // errors가 비어 있을 수 있어 field로 찾습니다. 다른 field의 400은 지역 선택이 아니라 오류입니다.
-    const lacksLocation =
-      error.code === "HOSPITAL_400" &&
-      getFieldErrors(error).some((item) => item.field === "location");
-    if (lacksLocation) return { kind: "needsRegion", error };
+    if (isLocationRequiredError(error)) return { kind: "needsRegion", error };
     throw error;
   }
 
@@ -159,4 +174,39 @@ export async function getNearestHealthCenter(
     },
     signal,
   });
+}
+
+// 가까운 응급실을 가까운 순으로 찾습니다. 0건이면 hospitals가 []입니다.
+// 실패하면 ApiError를 던집니다. 위치와 지역이 모두 없는 경우는 isLocationRequiredError로 구분합니다.
+export async function getEmergencyRooms(
+  params: EmergencyRoomParams = {},
+  signal?: AbortSignal,
+): Promise<HospitalSearchResult> {
+  const radius = params.radius ?? EMERGENCY_ROOM_RADIUS_DEFAULT_KM;
+  const limit = params.limit ?? EMERGENCY_ROOM_LIMIT_DEFAULT;
+
+  let result: HospitalSearchResult;
+  if (isMockApi) {
+    signal?.throwIfAborted();
+    result = mock.getEmergencyRooms(params, radius, limit);
+  } else {
+    result = await apiRequest<HospitalSearchResult>(
+      "/hospitals/emergency-rooms",
+      {
+        query: {
+          latitude: params.latitude,
+          longitude: params.longitude,
+          regionCode: params.regionCode,
+          radius,
+          limit,
+        },
+        signal,
+      },
+    );
+  }
+
+  if (!Array.isArray(result?.hospitals)) {
+    throw new ApiError(INVALID_RESPONSE, "", 200);
+  }
+  return result;
 }
