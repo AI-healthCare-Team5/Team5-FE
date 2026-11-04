@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
 import { createSampleRecords } from "@/stores/fixtures";
+import type { IntakeStartRequest } from "@/stores/intakeStart";
 import {
   readLoginIntent,
   type LoginIntent,
@@ -14,6 +15,8 @@ import {
 
 interface AppState {
   interview: Interview;
+  // S04에서 "다음"을 누를 때 만든 문진 시작 요청입니다. 실제 호출은 #26에서 연결합니다.
+  intakeStart: IntakeStartRequest | null;
   loggedIn: boolean;
   nickname: string;
   recordConsent: boolean;
@@ -28,6 +31,7 @@ const loginIntent = readLoginIntent();
 
 const initialState: AppState = {
   interview: {},
+  intakeStart: null,
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,
@@ -51,8 +55,12 @@ function subscribe(listener: () => void) {
   };
 }
 
+export function getAppState() {
+  return state;
+}
+
 export function useAppStore() {
-  return useSyncExternalStore(subscribe, () => state);
+  return useSyncExternalStore(subscribe, getAppState);
 }
 
 export const appActions = {
@@ -60,7 +68,10 @@ export const appActions = {
     update({ interview: { ...state.interview, [key]: value } });
   },
   startInterview() {
-    update({ interview: { ...initialState.interview } });
+    update({ interview: { ...initialState.interview }, intakeStart: null });
+  },
+  prepareIntake(request: IntakeStartRequest) {
+    update({ intakeStart: request });
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });
