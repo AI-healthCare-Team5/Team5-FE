@@ -1,62 +1,93 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
+import { isMockApi } from "@/api/client";
 import { DesignIcon } from "@/components/DesignIcon";
 import { HospitalMap } from "@/components/map/HospitalMap";
 import { ActionLink, PageTitle } from "@/components/ui";
 import { HospitalCard } from "@/pages/hospitals/components/HospitalCard";
-import { sampleHospitalSearch } from "@/pages/hospitals/sampleHospitals";
+import { hospitalOutcomePath } from "@/pages/hospitals/hospitalSearch";
+import {
+  createSampleHospitalSearch,
+  sampleDepartment,
+  sampleUserLocation,
+} from "@/pages/hospitals/sampleHospitals";
 import { formatRecordDate } from "@/pages/records/formatRecordDate";
 
 // 추천 이유는 API가 만든 문장이라, 면책 문장은 화면에서 항상 붙입니다.
 const disclaimer = "진단이 아니라 진료과 안내예요.";
 
+// 문진·병원 API(#26)를 연결하기 전까지는 가짜 응답(VITE_API_MOCK)에서만 같은 모양의 가짜 응답을 쓰고,
+// 실제 경로에서는 가짜 진료과·병원이 실제 안내처럼 보이지 않도록 준비 중으로 보여 줍니다.
 export function HospitalsPage() {
-  const search = sampleHospitalSearch;
+  // 진료 시간 문구의 "오늘·내일"을 화면을 연 시각 기준으로 정합니다.
+  const [now] = useState(() => new Date());
+  const [outcome] = useState(() =>
+    isMockApi ? createSampleHospitalSearch(now) : null,
+  );
   const [selectedId, setSelectedId] = useState<string>();
+  if (!outcome) {
+    return (
+      <>
+        <PageTitle description="병원 검색 서버를 연결한 뒤에 가까운 병원을 안내할 수 있어요.">
+          병원 안내를 준비 중이에요
+        </PageTitle>
+        <ActionLink to="/">처음으로</ActionLink>
+      </>
+    );
+  }
+  const department = sampleDepartment;
+  const hospitals = outcome.kind === "found" ? outcome.result.hospitals : [];
   // 고르기 전에는 지금 목록의 첫 병원을 선택한 것으로 봅니다.
-  const activeId =
-    selectedId ??
-    (search.status === "ok" ? search.hospitals[0]?.id : undefined);
-  if (search.status === "error") {
-    return <Navigate to="/hospital-error" replace />;
+  const activeId = selectedId ?? hospitals[0]?.hospitalId.toString();
+  const redirect = hospitalOutcomePath(outcome);
+  if (redirect || outcome.kind !== "found") {
+    return <Navigate to={redirect ?? "/hospital-error"} replace />;
   }
-  if (search.hospitals.length === 0) {
-    return <Navigate to="/hospital-empty" replace />;
-  }
+  const { result } = outcome;
   return (
     <>
       <PageTitle
         eyebrow="추천 진료과"
-        description={`${search.reason} ${disclaimer}`}
+        description={`${department.recommendReason} ${disclaimer}`}
       >
         <span className="sr-only">추천 진료과 </span>
-        {search.department}
+        {department.departmentName}
       </PageTitle>
       <HospitalMap
-        hospitals={search.hospitals}
+        hospitals={hospitals.map((hospital) => ({
+          id: hospital.hospitalId.toString(),
+          name: hospital.name,
+          latitude: hospital.latitude,
+          longitude: hospital.longitude,
+        }))}
         selectedHospitalId={activeId}
-        userLocation={search.userLocation}
+        userLocation={sampleUserLocation}
         onSelectHospital={setSelectedId}
       />
       <section aria-labelledby="hospitals-list" className="flex flex-col gap-4">
         <h2 id="hospitals-list" className="text-[1.222rem] font-bold">
-          가까운 병원 {search.hospitals.length}곳
+          가까운 병원 {hospitals.length}곳
         </h2>
         <ol className="flex flex-col gap-3">
-          {search.hospitals.map((hospital, index) => (
-            <HospitalCard
-              key={hospital.id}
-              hospital={hospital}
-              rank={index + 1}
-              selected={hospital.id === activeId}
-              onSelect={() => setSelectedId(hospital.id)}
-            />
-          ))}
+          {hospitals.map((hospital, index) => {
+            const id = hospital.hospitalId.toString();
+            return (
+              <HospitalCard
+                key={id}
+                hospital={hospital}
+                departmentCode={department.departmentCode}
+                now={now}
+                rank={index + 1}
+                selected={id === activeId}
+                onSelect={() => setSelectedId(id)}
+              />
+            );
+          })}
         </ol>
         <p className="flex items-start gap-[10px] rounded-[14px] bg-notice px-4 py-[14px] text-[0.889rem] text-notice-ink">
           <DesignIcon name="info" size={20} />
           <span>
-            공공데이터 기준 · {formatRecordDate(search.dataUpdatedAt)} 갱신
+            공공데이터 기준 · {formatRecordDate(result.dataUpdatedAt)} 갱신
             <br />
             가기 전에 전화로 진료 여부를 꼭 확인하세요.
           </span>
