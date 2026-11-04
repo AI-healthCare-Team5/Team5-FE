@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
 import { createSampleRecords } from "@/stores/fixtures";
+import { emptyGuardianForm, type GuardianForm } from "@/stores/guardianForm";
 import type { IntakeStartRequest } from "@/stores/intakeStart";
 import {
   readLoginIntent,
@@ -26,6 +27,8 @@ interface AppState {
   saveTarget: SaveTarget | null;
   // 지금 요약지를 내 기록에 보관했는지. 로그인·동의를 거쳐 S06으로 돌아와도 유지합니다.
   summarySaved: boolean;
+  // E03에서 입력 중인 보호자 연락처입니다. 동의 내용(C01)을 보고 돌아와도 남습니다.
+  guardianDraft: GuardianForm;
 }
 
 // 카카오를 다녀오거나 새로고침해도 로그인 전에 기억한 내용으로 이어집니다.
@@ -41,6 +44,7 @@ const initialState: AppState = {
   returnTo: loginIntent.returnTo,
   saveTarget: loginIntent.saveTarget,
   summarySaved: false,
+  guardianDraft: emptyGuardianForm,
 };
 
 let state: AppState = initialState;
@@ -80,6 +84,12 @@ export const appActions = {
   },
   prepareIntake(request: IntakeStartRequest) {
     update({ intakeStart: request });
+  },
+  editGuardianDraft(patch: Partial<GuardianForm>) {
+    update({ guardianDraft: { ...state.guardianDraft, ...patch } });
+  },
+  clearGuardianDraft() {
+    update({ guardianDraft: emptyGuardianForm });
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });
@@ -136,6 +146,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      guardianDraft: emptyGuardianForm,
     });
   },
   withdraw() {
@@ -146,6 +157,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      guardianDraft: emptyGuardianForm,
     });
   },
 };
