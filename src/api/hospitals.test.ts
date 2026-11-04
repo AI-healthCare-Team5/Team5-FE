@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, INVALID_RESPONSE, NETWORK_ERROR } from "@/api/errors";
 import {
+  getEmergencyRooms,
   getNearestHealthCenter,
+  isLocationRequiredError,
   searchHospitals,
   type Hospital,
   type HospitalSearchResult,
@@ -363,5 +365,142 @@ describe("가까운 보건소", () => {
     await expect(
       getNearestHealthCenter({ regionCode: "51720" }),
     ).rejects.toMatchObject({ code: "HOSPITAL_500" });
+  });
+});
+
+describe("가까운 응급실", () => {
+  it("GET /api/hospitals/emergency-rooms에 좌표와 기본값 30km·2곳을 쿼리로 보낸다", async () => {
+    const result = searchResult([hospital]);
+    fetchMock.mockResolvedValueOnce(ok(result));
+
+    await expect(
+      getEmergencyRooms({ latitude: 37.6971, longitude: 127.8887 }),
+    ).resolves.toEqual(result);
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+    const { path, params } = queryOf();
+    expect(path).toBe("/api/hospitals/emergency-rooms");
+    expect(Object.fromEntries(params)).toEqual({
+      latitude: "37.6971",
+      longitude: "127.8887",
+      radius: "30",
+      limit: "2",
+    });
+  });
+
+  it("지역으로 찾을 때는 regionCode와 지정한 반경·개수를 그대로 보낸다", async () => {
+    fetchMock.mockResolvedValueOnce(ok(searchResult([hospital])));
+
+    await getEmergencyRooms({ regionCode: "51720", radius: 50, limit: 10 });
+
+    expect(Object.fromEntries(queryOf().params)).toEqual({
+      regionCode: "51720",
+      radius: "50",
+      limit: "10",
+    });
+  });
+
+  it("위치도 지역도 없으면 위치 쿼리 없이 보내고 서버의 location 오류를 구분할 수 있다", async () => {
+    fetchMock.mockResolvedValueOnce(
+      fail(400, "HOSPITAL_400", {
+        errors: [{ field: "location", reason: "위치나 지역이 필요해요." }],
+      }),
+    );
+
+    const error: unknown = await getEmergencyRooms().catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isLocationRequiredError(error)).toBe(true);
+    const { params } = queryOf();
+    expect(params.has("latitude")).toBe(false);
+    expect(params.has("longitude")).toBe(false);
+    expect(params.has("regionCode")).toBe(false);
+  });
+
+  it("0건이면 빈 목록을 그대로 돌려준다", async () => {
+    fetchMock.mockResolvedValueOnce(ok(searchResult([])));
+
+    const result = await getEmergencyRooms({ regionCode: "51720" });
+
+    expect(result.hospitals).toEqual([]);
+  });
+
+  it("hospitals가 배열이 아닌 성공 응답은 INVALID_RESPONSE로 던진다", async () => {
+    fetchMock.mockResolvedValueOnce(ok({ radiusKm: 30 }));
+
+    await expect(
+      getEmergencyRooms({ regionCode: "51720" }),
+    ).rejects.toMatchObject({ name: "ApiError", code: INVALID_RESPONSE });
+  });
+
+  it("서버 오류는 ApiError로 던진다", async () => {
+    fetchMock.mockResolvedValueOnce(fail(500, "HOSPITAL_500"));
+
+    await expect(
+      getEmergencyRooms({ regionCode: "51720" }),
+    ).rejects.toMatchObject({ name: "ApiError", code: "HOSPITAL_500" });
+  });
+
+  it("취소하면 취소 오류를 그대로 던진다", async () => {
+    const controller = new AbortController();
+    fetchMock.mockImplementationOnce(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    );
+
+    const promise = getEmergencyRooms(
+      { regionCode: "51720" },
+      controller.signal,
+    );
+    const assertion = expect(promise).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    controller.abort();
+
+    await assertion;
+  });
+});
+
+describe("위치 없음 오류 판별", () => {
+  const location = { field: "location", reason: "위치나 지역이 필요해요." };
+  const radius = { field: "radius", reason: "범위를 벗어났어요." };
+
+  it("HOSPITAL_400이고 errors에 location이 있으면 true다", () => {
+    expect(
+      isLocationRequiredError(
+        new ApiError("HOSPITAL_400", "", 400, { errors: [location] }),
+      ),
+    ).toBe(true);
+  });
+
+  it("location이 두 번째 항목이어도 true다", () => {
+    expect(
+      isLocationRequiredError(
+        new ApiError("HOSPITAL_400", "", 400, { errors: [radius, location] }),
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["다른 field", new ApiError("HOSPITAL_400", "", 400, { errors: [radius] })],
+    ["빈 errors", new ApiError("HOSPITAL_400", "", 400, { errors: [] })],
+    ["errors 없음", new ApiError("HOSPITAL_400", "", 400, {})],
+    ["result가 null", new ApiError("HOSPITAL_400", "", 400, null)],
+    [
+      "다른 도메인의 400",
+      new ApiError("INTAKE_400", "", 400, { errors: [location] }),
+    ],
+    ["HOSPITAL_500", new ApiError("HOSPITAL_500", "", 500)],
+    ["ApiError가 아닌 오류", new Error("오류")],
+    ["null", null],
+  ])("%s이면 false다", (_name, error) => {
+    expect(isLocationRequiredError(error)).toBe(false);
   });
 });

@@ -23,6 +23,35 @@ export interface KakaoCustomOverlay {
   setZIndex(zIndex: number): void;
 }
 
+export interface KakaoGeocoderResult {
+  // 도로명 주소가 없는 좌표는 null입니다.
+  road_address: { address_name: string } | null;
+  address: { address_name: string } | null;
+}
+
+export type KakaoServicesStatus = string;
+
+export interface KakaoGeocoder {
+  // 카카오 API는 위도가 아니라 경도를 먼저 받습니다.
+  coord2Address(
+    longitude: number,
+    latitude: number,
+    callback: (
+      result: KakaoGeocoderResult[],
+      status: KakaoServicesStatus,
+    ) => void,
+  ): void;
+}
+
+export interface KakaoServicesApi {
+  Geocoder: new () => KakaoGeocoder;
+  Status: {
+    OK: KakaoServicesStatus;
+    ZERO_RESULT: KakaoServicesStatus;
+    ERROR: KakaoServicesStatus;
+  };
+}
+
 export interface KakaoMapsApi {
   load(callback: () => void): void;
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
@@ -37,6 +66,7 @@ export interface KakaoMapsApi {
     clickable?: boolean;
     zIndex?: number;
   }) => KakaoCustomOverlay;
+  services: KakaoServicesApi;
 }
 
 declare global {
@@ -46,7 +76,7 @@ declare global {
 }
 
 export function getKakaoMapSdkUrl(appKey: string) {
-  return `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;
+  return `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&libraries=services&autoload=false`;
 }
 
 // sdk.js 뒤에 maps.load()가 지도 코어 스크립트를 따로 불러오는데, 그 실패는 알려 주지 않습니다.

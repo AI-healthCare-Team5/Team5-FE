@@ -30,3 +30,25 @@ export function requestCurrentPosition(
     }
   });
 }
+
+// 위치를 받지 못했을 때 다시 눌러 보라는 안내입니다. S05a와 E01이 함께 씁니다.
+export const LOCATION_FAILED_MESSAGE =
+  "현재 위치를 확인하지 못했어요. 위치 사용을 허용한 뒤 다시 눌러 주세요.";
+
+// 권한 창을 띄우지 않고 위치 권한 상태만 봅니다.
+// Permissions API가 없거나 조회에 실패하면 unknown이고, 호출한 쪽은 권한이 없는 것처럼 다룹니다.
+export type GeolocationPermission = "granted" | "prompt" | "denied" | "unknown";
+
+export async function getGeolocationPermission(): Promise<GeolocationPermission> {
+  try {
+    const permissions =
+      typeof navigator === "undefined" ? undefined : navigator.permissions;
+    if (!permissions?.query) return "unknown";
+    const { state } = await permissions.query({ name: "geolocation" });
+    return state === "granted" || state === "prompt" || state === "denied"
+      ? state
+      : "unknown";
+  } catch {
+    return "unknown";
+  }
+}

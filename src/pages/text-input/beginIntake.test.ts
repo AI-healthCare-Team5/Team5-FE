@@ -7,6 +7,7 @@ import {
 } from "@/api/errors";
 import { cancelIntake, startIntake, type IntakeResponse } from "@/api/intakes";
 import { beginButtonIntake } from "@/pages/text-input/beginIntake";
+import { appActions, getAppState } from "@/stores/appStore";
 import {
   beginIntakeSession,
   readIntakeSession,
@@ -67,6 +68,7 @@ beforeEach(() => {
     },
   });
   resetIntakeFlow();
+  appActions.clearEmergency();
 });
 
 describe("S04 문진 시작", () => {
@@ -124,7 +126,7 @@ describe("S04 문진 시작", () => {
     await Promise.resolve();
   });
 
-  it("위험 신호로 시작하면 응급으로 알리고 문진을 기억하지 않는다", async () => {
+  it("위험 신호로 시작하면 응급으로 알리고 E01에 보여 줄 응급 정보를 기억하며 문진은 기억하지 않는다", async () => {
     startMock.mockResolvedValue(
       intake({
         status: "EMERGENCY",
@@ -140,6 +142,55 @@ describe("S04 문진 시작", () => {
       kind: "emergency",
     });
     expect(readIntakeSession()).toBeNull();
+    expect(getAppState().emergency).toEqual({
+      intakeId: "intake-1",
+      userUtterance: "가슴이 조여요",
+    });
+    // 응급 카드(E02)가 이 문진 ID로 조회하므로 서버의 문진을 지우지 않는다.
+    expect(cancelMock).not.toHaveBeenCalled();
+  });
+
+  it("S04로 돌아와 다시 시작했는데 응급이면 먼저 시작한 문진을 지워 S04a로 돌아가도 이어지지 않는다", async () => {
+    beginIntakeSession(intake({ intakeId: "intake-old" }));
+    startMock.mockResolvedValue(
+      intake({ intakeId: "intake-new", status: "EMERGENCY", question: null }),
+    );
+
+    await expect(beginButtonIntake(request)).resolves.toEqual({
+      kind: "emergency",
+    });
+    expect(cancelMock).toHaveBeenCalledTimes(1);
+    expect(cancelMock.mock.calls[0][0]).toBe("intake-old");
+    expect(readIntakeSession()).toBeNull();
+    expect(getAppState().emergency).toEqual({
+      intakeId: "intake-new",
+      userUtterance: null,
+    });
+  });
+
+  it("새 문진을 정상으로 시작하면 지난 응급 정보를 지운다", async () => {
+    appActions.enterEmergency({
+      intakeId: "intake-old",
+      userUtterance: "가슴이 조여요",
+    });
+    startMock.mockResolvedValue(intake());
+
+    await beginButtonIntake(request);
+
+    expect(getAppState().emergency).toBeNull();
+  });
+
+  it("응급 응답이 오기 전에 화면을 떠나면 응급 정보를 기억하지 않는다", async () => {
+    const controller = new AbortController();
+    startMock.mockImplementation(async () => {
+      controller.abort();
+      return intake({ status: "EMERGENCY", question: null });
+    });
+
+    await expect(
+      beginButtonIntake(request, controller.signal),
+    ).resolves.toEqual({ kind: "aborted" });
+    expect(getAppState().emergency).toBeNull();
   });
 
   it("서버가 거절하면 서버 문장을 안내하고 기억하지 않는다", async () => {

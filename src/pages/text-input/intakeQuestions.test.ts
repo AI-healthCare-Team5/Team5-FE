@@ -19,6 +19,7 @@ import {
   type IntakeQuestionsExit,
   type IntakeQuestionsView,
 } from "@/pages/text-input/intakeQuestions";
+import { appActions, getAppState } from "@/stores/appStore";
 import {
   beginIntakeSession,
   readIntakeSession,
@@ -153,6 +154,7 @@ beforeEach(() => {
     },
   });
   resetIntakeFlow();
+  appActions.clearEmergency();
 });
 
 afterEach(() => {
@@ -367,13 +369,18 @@ describe("S04a 응급과 없어진 문진", () => {
 
     expect(exits).toEqual(["emergency"]);
     expect(readIntakeSession()).toBeNull();
+    // E01 "말씀하신 내용"에 보여 줄 서버의 응급 정보를 기억한다.
+    expect(getAppState().emergency).toEqual({
+      intakeId: "intake-1",
+      userUtterance: "가슴이 조여요",
+    });
     // 응급 상태를 질문 화면으로 그리지 않는다.
     expect(views.every((view) => view.intake.status === "IN_PROGRESS")).toBe(
       true,
     );
   });
 
-  it("이미 응급으로 끝난 문진(INTAKE_409, EMERGENCY)이면 응급으로 보낸다", async () => {
+  it("이미 응급으로 끝난 문진(INTAKE_409, EMERGENCY)이면 다시 조회하지 않고 응급으로 보내며 말씀하신 내용은 비워 둔다", async () => {
     answerMock.mockResolvedValue({ kind: "ended", status: "EMERGENCY" });
     const { questions, exits } = setup(intake(3));
 
@@ -381,6 +388,47 @@ describe("S04a 응급과 없어진 문진", () => {
 
     expect(exits).toEqual(["emergency"]);
     expect(getMock).not.toHaveBeenCalled();
+    expect(getAppState().emergency).toEqual({
+      intakeId: "intake-1",
+      userUtterance: null,
+    });
+  });
+
+  it("이전 질문 요청의 응답이 응급이어도 응급으로 보낸다", async () => {
+    backMock.mockResolvedValue(
+      advanced(
+        intake(2, {
+          status: "EMERGENCY",
+          question: null,
+          emergency: {
+            userUtterance: "숨쉬기가 힘들어요",
+            redFlagCategory: "BREATHING",
+          },
+        }),
+      ),
+    );
+    const { questions, exits } = setup(intake(3));
+
+    await questions.back();
+
+    expect(exits).toEqual(["emergency"]);
+    expect(getAppState().emergency?.userUtterance).toBe("숨쉬기가 힘들어요");
+  });
+
+  it("응답이 오기 전에 화면을 떠나면 응급 정보를 기억하지 않고 이동하지 않는다", async () => {
+    const pending = deferred<IntakeStepResult>();
+    answerMock.mockReturnValue(pending.promise);
+    const { questions, exits } = setup(intake(3));
+
+    const submitting = questions.submit(textAnswer);
+    questions.dispose();
+    pending.resolve(
+      advanced(intake(3, { status: "EMERGENCY", question: null })),
+    );
+    await submitting;
+
+    expect(exits).toEqual([]);
+    expect(getAppState().emergency).toBeNull();
   });
 
   it("이미 취소된 문진(INTAKE_409, CANCELED)이면 기억한 것을 지우고 처음으로 보낸다", async () => {
