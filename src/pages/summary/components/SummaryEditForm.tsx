@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { NONE_TEXT, UNCHECKED_TEXT } from "@/api/values";
 import { Button, Card } from "@/components/ui";
 import type { SummaryContent } from "@/components/summary/types";
@@ -27,15 +27,19 @@ function Field({
   value,
   maxLength,
   required = false,
+  error,
   onChange,
 }: {
   label: string;
   value: string;
   maxLength: number;
   required?: boolean;
+  // 값이 있을 때만 입력란 아래에 보이고 aria-describedby로 이어집니다.
+  error?: string;
   onChange: (value: string) => void;
 }) {
   const id = useId();
+  const errorId = `${id}-error`;
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={id} className="font-bold">
@@ -46,9 +50,16 @@ function Field({
         value={value}
         required={required}
         maxLength={maxLength}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         onChange={(event) => onChange(event.target.value)}
         className={inputClass}
       />
+      {error && (
+        <p id={errorId} className="text-[0.889rem] text-emergency-ink">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -135,13 +146,25 @@ export function SummaryEditForm({
   onCancel: () => void;
 }) {
   const [edits, setEdits] = useState(() => initialEdits(summary));
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const canSave = canSaveEdits(edits);
+
+  // 같은 경로 안의 전환이라 AppShell의 h1 포커스가 동작하지 않아 폼 제목으로 옮깁니다.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <Card className="flex flex-col gap-5">
+      <h2 ref={headingRef} tabIndex={-1} className="text-[1.111rem] font-bold">
+        고칠 곳을 알려 주세요
+      </h2>
       <Field
         label="주된 증상"
         value={edits.mainSymptom}
         maxLength={maxLengths.mainSymptom}
         required
+        error={canSave ? undefined : "주된 증상은 비울 수 없어요."}
         onChange={(mainSymptom) => setEdits({ ...edits, mainSymptom })}
       />
       <Field
@@ -164,6 +187,12 @@ export function SummaryEditForm({
           }
         />
       ))}
+      <Field
+        label="추가로 알려주신 내용"
+        value={edits.extraNote}
+        maxLength={maxLengths.other}
+        onChange={(extraNote) => setEdits({ ...edits, extraNote })}
+      />
       {healthKeys.map((key) => (
         <HealthField
           key={key}
@@ -184,7 +213,7 @@ export function SummaryEditForm({
         </dd>
       </dl>
       <div className="flex flex-col gap-3">
-        <Button disabled={!canSaveEdits(edits)} onClick={() => onSave(edits)}>
+        <Button disabled={!canSave} onClick={() => onSave(edits)}>
           저장하기
         </Button>
         <Button variant="outline" onClick={onCancel}>

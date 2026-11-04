@@ -33,7 +33,8 @@ function formatHealthInfo(value: SummaryContent["medications"]): string {
   );
 }
 
-// 요약지 항목 순서: 나이대·성별 / 주된 증상 / 언제부터 / 증상별 항목(order 순) / 복용약 / 앓는 병 / 알레르기 / 진료과
+// 요약지 항목 순서: 나이대·성별 / 주된 증상 / 언제부터 / 증상별 항목(order 순) / 추가 내용 / 복용약 / 앓는 병 / 알레르기 / 진료과
+// 추가 내용은 선택 입력이라 "확인 못 했어요" 대신 값이 있을 때만 행을 만듭니다.
 export function buildSummaryRows(summary: SummaryContent): SummaryRow[] {
   const ageGroup = summary.ageGroup ? ageGroupLabels[summary.ageGroup] : null;
   const gender = summary.gender ? genderLabels[summary.gender] : null;
@@ -64,6 +65,15 @@ export function buildSummaryRows(summary: SummaryContent): SummaryRow[] {
       value: formatCollectedValue(summary.onsetDetail),
     },
     ...items,
+    ...(summary.extraNote?.trim()
+      ? [
+          {
+            key: "extraNote",
+            label: "추가로 알려주신 내용",
+            value: summary.extraNote,
+          },
+        ]
+      : []),
     {
       key: "medications",
       label: "복용 중인 약",

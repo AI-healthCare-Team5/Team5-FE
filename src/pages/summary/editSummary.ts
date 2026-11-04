@@ -15,6 +15,7 @@ export interface SummaryEdits {
   onsetDetail: string;
   // 증상별 항목의 값입니다. 키는 항목의 order입니다.
   itemValues: Record<number, string>;
+  extraNote: string;
   health: Record<HealthKey, HealthEntryEdit[]>;
 }
 
@@ -63,6 +64,8 @@ export function applySummaryEdits(
       ...item,
       value: blankToNull(edits.itemValues[item.order] ?? item.value ?? ""),
     })),
+    // PATCH 명세에서 extraNote는 null로 보내면 지워집니다.
+    extraNote: blankToNull(edits.extraNote),
     medications: applyHealthEdits(
       summary.medications,
       edits.health.medications,
@@ -73,8 +76,12 @@ export function applySummaryEdits(
   };
 }
 
+// 화면용 키라서 고유하기만 하면 됩니다.
+// crypto.randomUUID는 HTTPS가 아닌 주소(휴대폰에서 연 개발 서버 등)에서는 없어서 쓰지 않습니다.
+let nextEntryId = 0;
+
 export function newHealthEntry(name = "", detail = ""): HealthEntryEdit {
-  return { id: crypto.randomUUID(), name, detail };
+  return { id: `entry-${nextEntryId++}`, name, detail };
 }
 
 export function initialEdits(summary: SummaryContent): SummaryEdits {
@@ -88,6 +95,7 @@ export function initialEdits(summary: SummaryContent): SummaryEdits {
     itemValues: Object.fromEntries(
       summary.items.map((item) => [item.order, item.value ?? ""]),
     ),
+    extraNote: summary.extraNote ?? "",
     health: {
       medications: entries("medications"),
       conditions: entries("conditions"),

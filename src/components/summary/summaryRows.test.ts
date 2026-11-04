@@ -69,6 +69,20 @@ describe("buildSummaryRows", () => {
     expect(valueOf(summary, "item-1")).toBe("확인 못 했어요");
   });
 
+  it("추가 내용은 값이 있을 때만 증상별 항목 바로 뒤에 보여 준다", () => {
+    const withNote = { ...base, extraNote: "밤에 더 아파요" };
+    expect(labels(withNote).slice(3, 6)).toEqual([
+      "붓기",
+      "넘어진 적",
+      "추가로 알려주신 내용",
+    ]);
+    expect(valueOf(withNote, "extraNote")).toBe("밤에 더 아파요");
+    expect(labels({ ...base, extraNote: "  " })).not.toContain(
+      "추가로 알려주신 내용",
+    );
+    expect(labels(base)).not.toContain("추가로 알려주신 내용");
+  });
+
   it("증상별 항목이 없으면 고정 항목만 보여 준다", () => {
     expect(labels({ ...base, items: [] })).not.toContain("붓기");
     expect(labels({ ...base, items: [] })).toHaveLength(7);

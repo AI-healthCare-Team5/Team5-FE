@@ -42,6 +42,24 @@ describe("applySummaryEdits", () => {
     expect(next.items.map((item) => item.value)).toEqual(["조금 있음", null]);
   });
 
+  it("추가 내용을 고치고, 비우면 null(지움)이 된다", () => {
+    const withNote = { ...confirmed, extraNote: "밤에 더 아파요" };
+    expect(initialEdits(withNote).extraNote).toBe("밤에 더 아파요");
+    const changed = {
+      ...initialEdits(withNote),
+      extraNote: " 계단에서 아파요 ",
+    };
+    expect(applySummaryEdits(withNote, changed).extraNote).toBe(
+      "계단에서 아파요",
+    );
+    const cleared = { ...initialEdits(withNote), extraNote: "" };
+    expect(applySummaryEdits(withNote, cleared).extraNote).toBeNull();
+  });
+
+  it("건강 정보 항목 키는 서로 겹치지 않는다", () => {
+    expect(newHealthEntry().id).not.toBe(newHealthEntry().id);
+  });
+
   it("주된 증상을 비우면 저장할 수 없다", () => {
     expect(
       canSaveEdits({ ...initialEdits(confirmed), mainSymptom: "   " }),

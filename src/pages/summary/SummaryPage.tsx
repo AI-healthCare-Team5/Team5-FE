@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
 import { ScreenIcon } from "@/components/ScreenElements";
@@ -20,6 +20,20 @@ export function SummaryPage() {
   const [summary, setSummary] = useState(sampleSummary);
   const [large, setLarge] = useState(false);
   const [editing, setEditing] = useState(false);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
+
+  // 수정 폼이 닫히면 눌렀던 버튼이 다시 그려지므로 그 버튼으로 포커스를 돌려줍니다.
+  useEffect(() => {
+    if (editing || !returnFocus.current) return;
+    returnFocus.current = false;
+    editButtonRef.current?.focus();
+  }, [editing]);
+
+  function closeEditForm() {
+    returnFocus.current = true;
+    setEditing(false);
+  }
 
   function goToRecordFlow(path: "/login" | "/record-consent") {
     // 로그인·동의를 마치면 이 화면으로 돌아와 보관합니다.
@@ -39,12 +53,21 @@ export function SummaryPage() {
           summary={summary}
           onSave={(edits) => {
             setSummary(applySummaryEdits(summary, edits));
-            setEditing(false);
+            closeEditForm();
           }}
-          onCancel={() => setEditing(false)}
+          onCancel={closeEditForm}
         />
       ) : (
         <>
+          {/* 요약지 조회 API(#26)를 연결하기 전까지 실제 요약지로 오해하지 않게 알립니다. */}
+          <Notice tone="amber">
+            <span className="flex items-start gap-3">
+              <DesignIcon name="info" />
+              <span>
+                예시 요약지예요. 실제 문진 내용이 아니니 진료에 쓰지 마세요.
+              </span>
+            </span>
+          </Notice>
           {!summary.isConfirmed && (
             <Notice>
               <span className="flex items-start gap-3">
@@ -69,7 +92,11 @@ export function SummaryPage() {
             >
               내용이 맞아요
             </Button>
-            <Button variant="neutral" onClick={() => setEditing(true)}>
+            <Button
+              ref={editButtonRef}
+              variant="neutral"
+              onClick={() => setEditing(true)}
+            >
               <ScreenIcon name="write" size={22} />
               고칠 곳이 있어요
             </Button>
