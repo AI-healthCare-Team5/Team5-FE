@@ -37,7 +37,7 @@ export function MyInfoPage() {
       <PageTitle description="계정과 저장된 기록을 관리할 수 있어요.">
         내 정보
       </PageTitle>
-      {view.actionMessage && (
+      {view.phase === "ready" && view.actionMessage && (
         <WarningNotice>{view.actionMessage}</WarningNotice>
       )}
       {view.phase === "loading" && (
@@ -58,14 +58,20 @@ export function MyInfoPage() {
       )}
       {view.phase !== "ready" && (
         // 내 정보를 불러오지 못했거나 아직 불러오는 중이어도 로그아웃할 수 있어야 합니다(쿠키는 남아 있을 수 있습니다).
-        <Button
-          variant="neutral"
-          aria-busy={view.busy === "logout"}
-          disabled={busy}
-          onClick={() => void screenRef.current?.logout()}
-        >
-          로그아웃
-        </Button>
+        // 로그아웃이 실패한 안내는 누른 버튼 바로 위에 둡니다.
+        <>
+          {view.actionMessage && (
+            <WarningNotice>{view.actionMessage}</WarningNotice>
+          )}
+          <Button
+            variant="neutral"
+            aria-busy={view.busy === "logout"}
+            disabled={busy}
+            onClick={() => void screenRef.current?.logout()}
+          >
+            로그아웃
+          </Button>
+        </>
       )}
       {view.phase === "ready" && (
         <AccountCard
