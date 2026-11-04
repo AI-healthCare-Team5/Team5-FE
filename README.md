@@ -2,9 +2,9 @@
 
 ## M1 화면 구현 상태
 
-현재는 API 없이 화면을 확인하는 단계입니다. 카카오 로그인 버튼은 예시 로그인 상태로 전환하며 실제 인증·마이크·위치 권한·지도 SDK·병원 API를 호출하지 않습니다. 진료과와 병원 지도는 가짜 데이터와 예시 표시입니다. 문진·로그인·기록 데이터는 메모리에만 유지되며 새로고침하면 초기화됩니다. 글자 크기만 로컬 저장소에 저장합니다.
+문진 시작·추가 질문(S04, S04a), 진료과·병원 안내(S05), 요약지(S06a, S06)는 백엔드 API를 호출합니다. 백엔드 없이 화면을 확인하려면 `.env.local`에 `VITE_API_MOCK=true`를 두세요. 같은 API 함수가 가짜 응답을 돌려주고 위치도 가짜 좌표를 씁니다. 음성 문진(S03), 응급 분기, 지역 선택(S05b), 기록 보관·목록 API는 아직 연결하지 않았습니다. 카카오 로그인 버튼은 예시 로그인 상태로 전환하며 실제 인증·마이크·지도 SDK는 호출하지 않습니다. 문진·로그인·기록 데이터는 메모리에만 유지되며 새로고침하면 초기화됩니다. 문진·요약지 ID와 카카오 로그인 복귀 정보는 sessionStorage에, 글자 크기는 로컬 저장소에 저장합니다.
 
-문진은 답변이 없는 상태에서 시작합니다. 응급 안내에는 실제 사용할 수 있는 119 전화만 표시하고, 미구현 응급실·응급 카드 이동은 숨깁니다. 병원 오류의 검색 재시도·요약지 버튼은 대상 화면 연결 전까지 비활성 상태입니다. 요약지 로딩은 스피너를 표시하며 완료 신호 없이 다른 화면으로 이동하지 않습니다. 로그인 화면은 기존 공식 버튼 이미지로 표시하되 실제 소셜 인증은 수행하지 않습니다.
+문진은 답변이 없는 상태에서 시작합니다. 응급 안내에는 실제 사용할 수 있는 119 전화만 표시하고, 미구현 응급실·응급 카드 이동은 숨깁니다. 로그인 화면은 기존 공식 버튼 이미지로 표시하되 실제 소셜 인증은 수행하지 않습니다.
 
 - 시작: `/`, 마이크 안내: `/mic-guide`, 사용 불가: `/mic-guide/unavailable`
 - 7문항 문진: `/interview`, 위치 안내: `/location`
@@ -18,13 +18,13 @@
 
 ### 다른 담당자와 연결할 부분
 
-`/text-input`(#22), `/region`(#33), `/hospitals`(#24), `/summary`(#25), `/emergency-card`(#30), `/guardian`(#31)는 담당 화면이 합쳐질 때 `src/App.tsx`에 추가해야 합니다. 현재 해당 경로는 404로 처리하며 M1 작업에서 임의 화면을 만들지 않았습니다. `/my-info`는 계정 영역만 구현되어 있으므로 #32 본문을 추가해야 합니다. 따라서 전체 문진→병원→요약지 통합 흐름은 아직 완성되지 않았습니다.
+`/text-input`(#22), `/region`(#33), `/hospitals`(#24), `/summary`(#25), `/emergency-card`(#30), `/guardian`(#31)는 담당 화면이 합쳐질 때 `src/App.tsx`에 추가해야 합니다. 현재 해당 경로는 404로 처리하며 M1 작업에서 임의 화면을 만들지 않았습니다. `/my-info`는 계정 영역만 구현되어 있으므로 #32 본문을 추가해야 합니다. 따라서 글 입력 경로(S04 → S04a → S05 → S06a → S06)는 끝까지 이어지지만, 음성 경로(S03)는 문진 API에 연결하기 전까지 병원·요약지로 이어지지 않습니다.
 
 - `HospitalMap`: `hospitals: MapHospital[]`, `selectedHospitalId`, `onSelectHospital(id)`로 목록과 선택을 공유합니다. 좌표는 `latitude`, `longitude`이며 SDK 교체 전 예시 지도입니다.
-- `SummaryDocument`: `summary: SummaryData`를 받아 9개 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
+- `SummaryDocument`: 서버 요약지(`SummaryContent`, `src/api/summaries.ts`)를 받아 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
 - `SummaryStorage`: `loggedIn`, `saved`, `onLogin`, `onSave`를 전달합니다. 저장이 확인된 경우에만 `saved=true`를 전달합니다. 로그인 전 `appActions.prepareLogin("/summary")`를 호출하면 동의 후 복귀합니다.
 - `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `onLogout`, `onWithdraw`를 전달합니다.
-- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`와 `SummaryData`는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다.
+- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S03·S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록은 `SummaryContent`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다.
 
 ### 공통 UI 사용 예시
 

@@ -110,6 +110,12 @@ export function getRegions(): RegionListResult {
 
 // ---- 병원 ----
 
+// 가짜 응답에서는 브라우저에 위치 권한을 묻지 않고 이 좌표(홍천군 중심)를 현재 위치로 씁니다.
+// 가짜 병원들이 이 근처에 있어 지도와 거리가 맞게 보입니다.
+export function getMockUserLocation(): { latitude: number; longitude: number } {
+  return { latitude: 37.697, longitude: 127.889 };
+}
+
 const orthopedics: HospitalDepartment[] = [
   { departmentCode: "05", departmentName: "정형외과" },
 ];
@@ -230,12 +236,37 @@ export function searchHospitals(
   requireLocation(params);
   requireIntegerInRange("radius", radius, 1, 30);
   requireIntegerInRange("limit", limit, 1, 20);
+  const now = new Date();
   const inRadius = mockHospitals.filter((item) => item.distanceKm <= radius);
   return {
     radiusKm: radius,
     dataUpdatedAt: DATA_UPDATED_AT,
     totalCount: inRadius.length,
-    hospitals: structuredClone(inRadius.slice(0, limit)),
+    hospitals: structuredClone(inRadius.slice(0, limit)).map((hospital) =>
+      reopenTomorrow(hospital, now),
+    ),
+  };
+}
+
+const seoulDate = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+// 지금 쉬는 가짜 병원의 다음 진료 시작을 지금 기준 다음 날 09:00으로 맞춥니다.
+// 날짜를 고정해 두면 날이 지난 뒤에 "내일 09:00 시작"이 지난 날짜로 보이기 때문입니다.
+function reopenTomorrow(hospital: Hospital, now: Date): Hospital {
+  const { today } = hospital;
+  if (!today?.nextOpenAt) return hospital;
+  const tomorrow = new Date(now.getTime() + 86_400_000);
+  return {
+    ...hospital,
+    today: {
+      ...today,
+      nextOpenAt: `${seoulDate.format(tomorrow)}T09:00:00+09:00`,
+    },
   };
 }
 
@@ -306,7 +337,7 @@ const basicInfoQuestions: MockQuestion[] = [
   },
   {
     questionId: "q_medications",
-    text: "지금 드시는 약이 있나요?",
+    text: '지금 드시는 약이 있나요? 없으면 "없어요"라고 해 주세요.',
     answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",
@@ -314,7 +345,7 @@ const basicInfoQuestions: MockQuestion[] = [
   },
   {
     questionId: "q_conditions",
-    text: "앓고 계신 병이 있나요?",
+    text: '앓고 계신 병이 있나요? 없으면 "없어요"라고 해 주세요.',
     answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",
@@ -322,7 +353,7 @@ const basicInfoQuestions: MockQuestion[] = [
   },
   {
     questionId: "q_allergies",
-    text: "먹거나 바르고 나서 이상이 생긴 약이나 음식이 있나요?",
+    text: '약이나 음식 알레르기가 있나요? 없으면 "없어요"라고 해 주세요.',
     answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",

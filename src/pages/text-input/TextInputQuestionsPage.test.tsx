@@ -242,15 +242,13 @@ describe("IntakeAnswerText", () => {
       />,
     );
 
-  it("질문을 입력칸의 이름으로 읽히게 하고 작성 방법을 알려 준다", () => {
+  it("질문을 입력칸의 이름으로 읽히게 한다", () => {
     const markup = render({});
 
     expect(markup).toMatch(
       /<label[^>]*class="sr-only"[^>]*>지금 드시는 약이 있나요\?<\/label>/,
     );
     expect(markup).toContain("<textarea");
-    expect(markup).toContain("aria-describedby");
-    expect(markup).toContain("없으면 ‘없어요’라고 적어 주세요.");
   });
 
   it("글이 비어 있으면 다음 버튼이 잠겨 있다", () => {

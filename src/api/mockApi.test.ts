@@ -666,6 +666,20 @@ describe("가짜 병원과 시·군", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("지금 쉬는 병원의 다음 진료 시작은 날짜가 바뀌어도 늘 다음 날 09:00이다", async () => {
+    vi.useFakeTimers();
+    // 한국 시간 2026-12-20(일) 12:00입니다.
+    vi.setSystemTime(new Date("2026-12-20T03:00:00Z"));
+    const api = await loadMockApi();
+
+    const outcome = await api.searchHospitals({ regionCode: "51720" });
+
+    if (outcome.kind !== "found") throw new Error(outcome.kind);
+    expect(
+      outcome.result.hospitals.map((item) => item.today?.nextOpenAt ?? null),
+    ).toEqual([null, "2026-12-21T09:00:00+09:00", null]);
+  });
+
   it("위치도 지역도 없으면 needsRegion, 반경 안에 병원이 없으면 empty다", async () => {
     const api = await loadMockApi();
 

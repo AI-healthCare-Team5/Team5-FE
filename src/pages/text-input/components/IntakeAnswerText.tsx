@@ -27,7 +27,6 @@ export function IntakeAnswerText({
 }) {
   const [text, setText] = useState(initialText);
   const inputId = useId();
-  const hintId = useId();
   const answer = text.trim();
   return (
     <>
@@ -39,7 +38,6 @@ export function IntakeAnswerText({
         </label>
         <textarea
           id={inputId}
-          aria-describedby={hintId}
           value={text}
           onChange={(event) => setText(event.target.value)}
           disabled={busy}
@@ -47,9 +45,6 @@ export function IntakeAnswerText({
           rows={3}
           className="min-h-[7rem] w-full resize-y rounded-[16px] border border-control bg-surface px-4 py-3 placeholder:text-subtle disabled:cursor-not-allowed disabled:opacity-60"
         />
-        <p id={hintId} className="text-[0.889rem] text-muted">
-          없으면 ‘없어요’라고 적어 주세요.
-        </p>
       </div>
       <Button
         disabled={answer === "" || busy}

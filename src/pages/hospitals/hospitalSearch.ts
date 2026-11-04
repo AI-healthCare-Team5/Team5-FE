@@ -1,23 +1,57 @@
-import type {
-  HospitalSearchOutcome,
-  HospitalToday,
-} from "@/pages/hospitals/types";
+import {
+  HOSPITAL_RADIUS_DEFAULT_KM,
+  type HospitalToday,
+} from "@/api/hospitals";
 
-// 병원 목록이 아닌 결과는 각 화면으로 보냅니다.
-// S05b(지역 선택, #33)가 생기기 전까지 위치·지역이 없으면 위치 확인 화면(S05a)으로 보냅니다.
-export function hospitalOutcomePath(
-  outcome: HospitalSearchOutcome,
-): string | null {
-  switch (outcome.kind) {
-    case "found":
-      return null;
-    case "empty":
-      return "/hospital-empty";
-    case "needsRegion":
-      return "/location";
-    case "error":
-      return "/hospital-error";
-  }
+// S05c "30km까지 넓혀서 찾기"가 쓰는 반경이고, 서버가 받는 가장 큰 반경입니다.
+export const HOSPITAL_RADIUS_EXPANDED_KM = 30;
+
+// S05 병원 안내와 S05c·S05d가 주소로 주고받는 검색 조건입니다.
+// 새로고침해도 같은 검색이 이어지고, 지역 선택 화면(S05b, #33)은 이 주소로 이동하면 됩니다.
+export interface HospitalQuery {
+  // 검색 반경 km입니다. 없으면 기본값(10km)입니다.
+  radius?: number;
+  // 위치 대신 쓸 지역 코드입니다(S05b). 없으면 현재 위치로 찾습니다.
+  regionCode?: string;
+}
+
+// 주소의 검색 조건을 읽습니다. 1~30 사이 정수가 아닌 radius는 없는 것으로 보고 기본값을 씁니다.
+export function parseHospitalQuery(params: URLSearchParams): HospitalQuery {
+  const rawRadius = params.get("radius");
+  const radius =
+    rawRadius !== null && /^\d+$/.test(rawRadius) ? Number(rawRadius) : null;
+  const regionCode = params.get("regionCode")?.trim();
+  return {
+    ...(radius !== null && radius >= 1 && radius <= HOSPITAL_RADIUS_EXPANDED_KM
+      ? { radius }
+      : {}),
+    ...(regionCode ? { regionCode } : {}),
+  };
+}
+
+// 검색 조건을 주소에 붙여 같은 검색을 이어 갑니다.
+export function withHospitalQuery(path: string, query: HospitalQuery): string {
+  const params = new URLSearchParams();
+  if (query.radius !== undefined) params.set("radius", String(query.radius));
+  if (query.regionCode) params.set("regionCode", query.regionCode);
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+// 실제로 찾는 반경입니다.
+export function effectiveRadius(query: HospitalQuery): number {
+  return query.radius ?? HOSPITAL_RADIUS_DEFAULT_KM;
+}
+
+// 위치를 얻지 못해 S05에서 위치 확인(S05a)으로 돌아올 때 함께 넘기는 값입니다.
+export const locationFailedState = { locationFailed: true } as const;
+
+export function isLocationFailed(state: unknown): boolean {
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    (state as { locationFailed?: unknown }).locationFailed === true
+  );
 }
 
 export interface TodayHours {

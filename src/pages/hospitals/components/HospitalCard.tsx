@@ -1,7 +1,7 @@
 import { DesignIcon } from "@/components/DesignIcon";
 import { ScreenIcon } from "@/components/ScreenElements";
 import { formatTodayHours } from "@/pages/hospitals/hospitalSearch";
-import type { Hospital } from "@/pages/hospitals/types";
+import type { Hospital } from "@/api/hospitals";
 
 export function HospitalCard({
   hospital,
