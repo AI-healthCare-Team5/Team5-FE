@@ -1,3 +1,4 @@
+import { isMockApi } from "@/api/client";
 import { ActionLink, Button, Card } from "@/components/ui";
 
 export interface SummaryStorageProps {
@@ -13,6 +14,10 @@ export function SummaryStorage({
   onLogin,
   onSave,
 }: SummaryStorageProps) {
+  // 기록 저장 API(#29)가 연결되기 전에는 실제 경로에서 이 카드 전체를 숨깁니다.
+  // "저장했어요"와 "내 기록에서 다시 볼 수 있어요" 모두 아직 지킬 수 없는 약속이기 때문입니다.
+  if (!isMockApi) return null;
+
   let description = "로그인하면 이 요약지를 내 기록에서 다시 볼 수 있어요.";
   if (loggedIn) {
     description = saved

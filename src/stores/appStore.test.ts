@@ -1,99 +1,75 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requestCurrentPosition } from "@/components/map/currentPosition";
-import { appActions, getAppState } from "@/stores/appStore";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/map/currentPosition", () => ({
-  requestCurrentPosition: vi.fn(),
-}));
-
-const location = { latitude: 37.6971, longitude: 127.8887 };
-const entry = {
-  intakeId: "3f2a9c1e-0000-4000-8000-000000000001",
-  userUtterance: "가슴이 답답해요",
-};
-
-// 위치 요청을 테스트가 원하는 때에 끝낼 수 있게 합니다.
-function deferPosition() {
-  let settle: (value: typeof location | null) => void = () => {};
-  vi.mocked(requestCurrentPosition).mockReturnValueOnce(
-    new Promise((resolve) => {
-      settle = resolve;
-    }),
-  );
-  return (value: typeof location | null) => {
-    settle(value);
-    return Promise.resolve();
-  };
+// 모든 값은 가짜 데이터입니다.
+// isMockApi는 모듈을 불러올 때 정해지므로 테스트마다 환경 변수를 정하고 모듈을 새로 불러옵니다.
+async function load(mock: boolean) {
+  vi.resetModules();
+  vi.stubEnv("VITE_API_MOCK", mock ? "true" : "false");
+  const [{ appActions, getAppState }, { sampleSummary }] = await Promise.all([
+    import("@/stores/appStore"),
+    import("@/stores/fixtures"),
+  ]);
+  return { appActions, getAppState, sampleSummary };
 }
 
-beforeEach(() => {
-  vi.mocked(requestCurrentPosition).mockReset();
-  appActions.startInterview();
+function logInWithConsent(
+  appActions: Awaited<ReturnType<typeof load>>["appActions"],
+) {
+  appActions.completeLogin(
+    { nickname: "봄날", needsRecordConsent: false },
+    { returnTo: "/summary", saveTarget: null },
+  );
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
 });
 
-describe("응급 전환 상태", () => {
-  it("응급 전환 정보를 기억하고 새 문진을 시작하면 지운다", () => {
-    appActions.enterEmergency(entry);
-    expect(getAppState().emergency).toEqual(entry);
+describe("요약지 보관", () => {
+  it("실제 경로에서는 로그인하고 동의해도 보관하지 않고 저장 성공을 켜지 않는다", async () => {
+    const { appActions, getAppState, sampleSummary } = await load(false);
+    logInWithConsent(appActions);
 
-    appActions.startInterview();
+    appActions.saveSummary(sampleSummary);
 
-    expect(getAppState().emergency).toBeNull();
-  });
-});
-
-describe("현재 위치 한 번 묻기", () => {
-  it("묻는 동안 asking이고 허용하면 좌표를 기억한다", async () => {
-    const settle = deferPosition();
-
-    appActions.askCurrentLocationOnce();
-    expect(getAppState().currentLocation).toEqual({ status: "asking" });
-
-    await settle(location);
-
-    expect(getAppState().currentLocation).toEqual({
-      status: "found",
-      location,
-    });
+    expect(getAppState().summarySaved).toBe(false);
+    expect(getAppState().records).toEqual([]);
   });
 
-  it("거부하거나 받지 못하면 unavailable이고 다시 묻지 않는다", async () => {
-    const settle = deferPosition();
+  it("실제 경로에서 로그인해도 예시 기록을 넣지 않는다", async () => {
+    const { appActions, getAppState } = await load(false);
 
-    appActions.askCurrentLocationOnce();
-    await settle(null);
-    appActions.askCurrentLocationOnce();
+    logInWithConsent(appActions);
 
-    expect(getAppState().currentLocation).toEqual({ status: "unavailable" });
-    expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(getAppState().loggedIn).toBe(true);
+    expect(getAppState().records).toEqual([]);
   });
 
-  it("묻는 중에 다시 불러도 한 번만 묻는다", () => {
-    deferPosition();
+  it("목 모드에서는 로그인하고 동의하면 요약지를 보관하고 한 번만 보관한다", async () => {
+    const { appActions, getAppState, sampleSummary } = await load(true);
+    logInWithConsent(appActions);
+    const before = getAppState().records.length;
 
-    appActions.askCurrentLocationOnce();
-    appActions.askCurrentLocationOnce();
+    appActions.saveSummary(sampleSummary);
+    appActions.saveSummary(sampleSummary);
 
-    expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(getAppState().summarySaved).toBe(true);
+    expect(getAppState().records).toHaveLength(before + 1);
+    expect(getAppState().records[0].summary).toEqual(sampleSummary);
   });
 
-  it("좌표를 받은 뒤에는 다시 묻지 않는다", async () => {
-    const settle = deferPosition();
+  it("목 모드여도 로그인하지 않았거나 동의하지 않았으면 보관하지 않는다", async () => {
+    const { appActions, getAppState, sampleSummary } = await load(true);
 
-    appActions.askCurrentLocationOnce();
-    await settle(location);
-    appActions.askCurrentLocationOnce();
+    appActions.saveSummary(sampleSummary);
+    expect(getAppState().summarySaved).toBe(false);
 
-    expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
-  });
-
-  it("묻는 동안 새 문진을 시작하면 늦게 온 결과를 쓰지 않고 다시 물을 수 있다", async () => {
-    const settle = deferPosition();
-
-    appActions.askCurrentLocationOnce();
-    appActions.startInterview();
-    await settle(location);
-
-    expect(getAppState().currentLocation).toEqual({ status: "unasked" });
+    appActions.completeLogin(
+      { nickname: "봄날", needsRecordConsent: true },
+      { returnTo: "/summary", saveTarget: null },
+    );
+    appActions.saveSummary(sampleSummary);
+    expect(getAppState().summarySaved).toBe(false);
   });
 });

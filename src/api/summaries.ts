@@ -11,7 +11,7 @@ import type {
   SummaryStep,
   SummaryStepStatus,
 } from "@/api/enums";
-import { ApiError, INVALID_RESPONSE } from "@/api/errors";
+import { ApiError, INVALID_RESPONSE, isApiError } from "@/api/errors";
 import type { DepartmentRecommendation } from "@/api/intakes";
 import * as mock from "@/api/mockApi";
 import type { CollectedList, IsoDateTime } from "@/api/types";
@@ -163,6 +163,12 @@ export interface PollSummaryOptions {
 export const SUMMARY_POLL_INTERVAL_MS = 1000;
 // 폴링을 시작하고 이 시간 안에 끝나지 않으면 진행 중인 요청을 취소하고 다시 만들기를 안내합니다.
 export const SUMMARY_POLL_TIMEOUT_MS = 30_000;
+
+// SUMMARY_409입니다. 수정·확인은 요약지가 아직 만드는 중이거나 실패했을 때,
+// 다시 만들기는 이미 만드는 중이거나 만들어졌을 때 받습니다.
+export function isSummaryConflict(error: unknown): boolean {
+  return isApiError(error) && error.code === "SUMMARY_409";
+}
 
 function summaryPath(summaryId: string, suffix = ""): string {
   return `/summaries/${encodeURIComponent(summaryId)}${suffix}`;

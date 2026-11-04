@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { SummaryContent } from "@/api/summaries";
 import { buildSummaryRows } from "@/components/summary/summaryRows";
-import type { SummaryContent } from "@/components/summary/types";
 
 const base: SummaryContent = {
   ageGroup: "SEVENTIES",
@@ -59,13 +59,11 @@ describe("buildSummaryRows", () => {
       onsetDetail: null,
       medications: null,
       conditions: [],
-      department: null,
       items: [{ order: 1, label: "붓기", question: "부었나요?", value: null }],
     };
     expect(valueOf(summary, "onset")).toBe("확인 못 했어요");
     expect(valueOf(summary, "medications")).toBe("확인 못 했어요");
     expect(valueOf(summary, "conditions")).toBe("없음");
-    expect(valueOf(summary, "department")).toBe("확인 못 했어요");
     expect(valueOf(summary, "item-1")).toBe("확인 못 했어요");
   });
 
@@ -88,12 +86,23 @@ describe("buildSummaryRows", () => {
     expect(labels({ ...base, items: [] })).toHaveLength(7);
   });
 
+  // 명세상 항상 있는 값이지만 서버가 비워 보내도 화면이 깨지지 않아야 합니다.
+  // 타입을 거슬러 null을 넣으므로 unknown을 거칩니다.
+  const withNulls = (patch: Partial<Record<keyof SummaryContent, null>>) =>
+    ({ ...base, ...patch }) as unknown as SummaryContent;
+
   it("나이대나 성별 하나만 없으면 그쪽만 '확인 못 했어요'로 보여 준다", () => {
-    expect(valueOf({ ...base, gender: null }, "ageGender")).toBe(
+    expect(valueOf(withNulls({ gender: null }), "ageGender")).toBe(
       "70대 · 확인 못 했어요",
     );
     expect(
-      valueOf({ ...base, ageGroup: null, gender: null }, "ageGender"),
+      valueOf(withNulls({ ageGroup: null, gender: null }), "ageGender"),
     ).toBe("확인 못 했어요");
+  });
+
+  it("진료과가 없으면 '확인 못 했어요'로 보여 준다", () => {
+    expect(valueOf(withNulls({ department: null }), "department")).toBe(
+      "확인 못 했어요",
+    );
   });
 });

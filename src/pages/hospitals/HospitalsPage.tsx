@@ -1,75 +1,104 @@
-import { useState } from "react";
-import { Navigate } from "react-router";
-import { DesignIcon } from "@/components/DesignIcon";
-import { HospitalMap } from "@/components/map/HospitalMap";
-import { ActionLink, PageTitle } from "@/components/ui";
-import { HospitalCard } from "@/pages/hospitals/components/HospitalCard";
-import { sampleHospitalSearch } from "@/pages/hospitals/sampleHospitals";
-import { formatRecordDate } from "@/pages/records/formatRecordDate";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { WarningNotice } from "@/components/WarningNotice";
+import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
+import { HospitalResults } from "@/pages/hospitals/components/HospitalResults";
+import {
+  createHospitalsScreen,
+  initialHospitalsView,
+  type HospitalsExit,
+  type HospitalsScreen,
+} from "@/pages/hospitals/hospitalsScreen";
+import {
+  locationFailedState,
+  parseHospitalQuery,
+  withHospitalQuery,
+} from "@/pages/hospitals/hospitalSearch";
 
-// 추천 이유는 API가 만든 문장이라, 면책 문장은 화면에서 항상 붙입니다.
-const disclaimer = "진단이 아니라 진료과 안내예요.";
-
+// 문진이 끝나면 받은 추천 진료과(없으면 기억한 문진으로 다시 조회)와 현재 위치(또는 주소의 지역 코드)로 병원을 찾습니다.
+// 조회와 이동은 hospitalsScreen.ts가 맡고, 화면을 떠나면 진행 중인 요청을 취소합니다.
 export function HospitalsPage() {
-  const search = sampleHospitalSearch;
-  const [selectedId, setSelectedId] = useState<string>();
-  // 고르기 전에는 지금 목록의 첫 병원을 선택한 것으로 봅니다.
-  const activeId =
-    selectedId ??
-    (search.status === "ok" ? search.hospitals[0]?.id : undefined);
-  if (search.status === "error") {
-    return <Navigate to="/hospital-error" replace />;
+  const [searchParams] = useSearchParams();
+  const { radius, regionCode } = parseHospitalQuery(searchParams);
+  const navigate = useNavigate();
+  // 진료 시간 문구의 "오늘·내일"을 화면을 연 시각 기준으로 정합니다.
+  const [now] = useState(() => new Date());
+  const [view, setView] = useState(initialHospitalsView);
+  const screenRef = useRef<HospitalsScreen | null>(null);
+
+  useEffect(() => {
+    const query = {
+      ...(radius !== undefined ? { radius } : {}),
+      ...(regionCode ? { regionCode } : {}),
+    };
+    const route = (exit: HospitalsExit) => {
+      switch (exit.to) {
+        case "start":
+          navigate("/", { replace: true });
+          return;
+        case "location":
+          navigate("/location", {
+            replace: true,
+            state: exit.locationFailed ? locationFailedState : undefined,
+          });
+          return;
+        case "empty":
+          navigate(withHospitalQuery("/hospital-empty", query), {
+            replace: true,
+          });
+          return;
+        case "error":
+          navigate(withHospitalQuery("/hospital-error", query), {
+            replace: true,
+          });
+          return;
+      }
+    };
+    const screen = createHospitalsScreen(query, {
+      onView: setView,
+      onExit: route,
+    });
+    screenRef.current = screen;
+    void screen.load();
+    return () => {
+      screen.dispose();
+      screenRef.current = null;
+    };
+  }, [radius, regionCode, navigate]);
+
+  const { phase, department, result, userLocation, message } = view;
+  if (phase === "ready" && department && result) {
+    return (
+      <HospitalResults
+        department={department}
+        result={result}
+        userLocation={userLocation}
+        now={now}
+      />
+    );
   }
-  if (search.hospitals.length === 0) {
-    return <Navigate to="/hospital-empty" replace />;
+  if (phase === "error") {
+    return (
+      <>
+        <PageTitle>병원을 찾지 못했어요</PageTitle>
+        <WarningNotice>{message ?? ""}</WarningNotice>
+        <div className="flex flex-col gap-3">
+          <Button onClick={() => void screenRef.current?.load()}>
+            다시 시도
+          </Button>
+          <ActionLink to="/" variant="quiet">
+            처음으로
+          </ActionLink>
+        </div>
+      </>
+    );
   }
   return (
     <>
-      <PageTitle
-        eyebrow="추천 진료과"
-        description={`${search.reason} ${disclaimer}`}
-      >
-        <span className="sr-only">추천 진료과 </span>
-        {search.department}
-      </PageTitle>
-      <HospitalMap
-        hospitals={search.hospitals}
-        selectedHospitalId={activeId}
-        userLocation={search.userLocation}
-        onSelectHospital={setSelectedId}
-      />
-      <section aria-labelledby="hospitals-list" className="flex flex-col gap-4">
-        <h2 id="hospitals-list" className="text-[1.222rem] font-bold">
-          가까운 병원 {search.hospitals.length}곳
-        </h2>
-        <ol className="flex flex-col gap-3">
-          {search.hospitals.map((hospital, index) => (
-            <HospitalCard
-              key={hospital.id}
-              hospital={hospital}
-              rank={index + 1}
-              selected={hospital.id === activeId}
-              onSelect={() => setSelectedId(hospital.id)}
-            />
-          ))}
-        </ol>
-        <p className="flex items-start gap-[10px] rounded-[14px] bg-notice px-4 py-[14px] text-[0.889rem] text-notice-ink">
-          <DesignIcon name="info" size={20} />
-          <span>
-            공공데이터 기준 · {formatRecordDate(search.dataUpdatedAt)} 갱신
-            <br />
-            가기 전에 전화로 진료 여부를 꼭 확인하세요.
-          </span>
-        </p>
-      </section>
-      <div className="flex flex-col gap-3">
-        <ActionLink to="/summary-loading">
-          의사에게 보여줄 요약지 보기
-        </ActionLink>
-        <ActionLink to="/" variant="quiet">
-          처음부터 다시 하기
-        </ActionLink>
-      </div>
+      <PageTitle>병원을 찾는 중이에요</PageTitle>
+      <Card>
+        <p role="status">가까운 병원을 찾고 있어요.</p>
+      </Card>
     </>
   );
 }

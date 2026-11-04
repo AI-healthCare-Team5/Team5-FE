@@ -4,6 +4,7 @@ import {
   confirmSummary,
   getEmergencyCard,
   getSummary,
+  isSummaryConflict,
   pollSummary,
   retrySummary,
   updateSummary,
@@ -269,6 +270,15 @@ describe("응급 카드", () => {
 
     await expect(promise).rejects.toBeInstanceOf(ApiError);
     await expect(promise).rejects.toMatchObject({ code: "SUMMARY_409" });
+  });
+});
+
+describe("요약지 오류 분류", () => {
+  it("SUMMARY_409만 충돌로 본다", () => {
+    expect(isSummaryConflict(new ApiError("SUMMARY_409", "", 409))).toBe(true);
+    expect(isSummaryConflict(new ApiError("INTAKE_409", "", 409))).toBe(false);
+    expect(isSummaryConflict(new ApiError("SUMMARY_404", "", 404))).toBe(false);
+    expect(isSummaryConflict(new Error("SUMMARY_409"))).toBe(false);
   });
 });
 

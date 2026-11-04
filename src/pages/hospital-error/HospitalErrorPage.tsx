@@ -1,8 +1,21 @@
+import { useSearchParams } from "react-router";
 import { EmergencyHelp } from "@/components/EmergencyHelp";
 import { DesignIcon } from "@/components/DesignIcon";
 import { Illustration, ScreenIcon } from "@/components/ScreenElements";
-import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
+import { ActionLink, Card, PageTitle } from "@/components/ui";
+import {
+  parseHospitalQuery,
+  withHospitalQuery,
+} from "@/pages/hospitals/hospitalSearch";
+
+// S05(병원 안내)가 공공데이터 조회 실패(HOSPITAL_500)를 받으면 이 화면으로 보냅니다.
+// 다시 시도는 실패한 검색 조건(주소의 radius, regionCode)을 그대로 이어서 병원 안내로 돌아갑니다.
 export function HospitalErrorPage() {
+  const [searchParams] = useSearchParams();
+  const retryPath = withHospitalQuery(
+    "/hospitals",
+    parseHospitalQuery(searchParams),
+  );
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -21,17 +34,14 @@ export function HospitalErrorPage() {
         </PageTitle>
       </div>
       <div className="flex flex-col gap-3">
-        <Button disabled>
+        <ActionLink to={retryPath}>
           <ScreenIcon name="retry-white" size={24} />
           다시 시도
-        </Button>
-        <Button disabled variant="outline">
+        </ActionLink>
+        <ActionLink to="/summary-loading" variant="outline">
           <ScreenIcon name="document" size={24} />
           요약지 먼저 보기
-        </Button>
-        <p className="text-[0.889rem] text-muted">
-          병원 검색과 요약지 안내는 준비 중이에요.
-        </p>
+        </ActionLink>
       </div>
       <Card>
         <h2 className="mb-4 text-[1.111rem] font-bold">

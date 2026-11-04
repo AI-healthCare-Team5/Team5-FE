@@ -49,13 +49,14 @@ import type { CollectedList } from "@/api/types";
 const DATA_UPDATED_AT = "2026-11-04T04:00:00+09:00";
 const SUMMARY_CREATED_AT = "2026-11-04T10:00:00+09:00";
 
+// 모은 정보(collected)에 서버가 쓰는 문구와 같게 맞췄습니다(개발 서버에서 확인한 값).
 const bodyPartLabels: Record<BodyPart, string> = {
   HEAD: "머리",
   CHEST: "가슴",
   ABDOMEN: "배",
-  BACK: "등·허리",
-  ARM_SHOULDER: "팔·어깨",
-  LEG_KNEE: "다리·무릎",
+  BACK: "허리 · 등",
+  ARM_SHOULDER: "팔 · 어깨",
+  LEG_KNEE: "다리 · 무릎",
   SKIN: "피부",
   ETC: "기타",
 };
@@ -110,6 +111,12 @@ export function getRegions(): RegionListResult {
 }
 
 // ---- 병원 ----
+
+// 가짜 응답에서는 브라우저에 위치 권한을 묻지 않고 이 좌표(홍천군 중심)를 현재 위치로 씁니다.
+// 가짜 병원들이 이 근처에 있어 지도와 거리가 맞게 보입니다.
+export function getMockUserLocation(): { latitude: number; longitude: number } {
+  return { latitude: 37.697, longitude: 127.889 };
+}
 
 const orthopedics: HospitalDepartment[] = [
   { departmentCode: "05", departmentName: "정형외과" },
@@ -275,12 +282,37 @@ export function searchHospitals(
   requireLocation(params);
   requireIntegerInRange("radius", radius, 1, 30);
   requireIntegerInRange("limit", limit, 1, 20);
+  const now = new Date();
   const inRadius = mockHospitals.filter((item) => item.distanceKm <= radius);
   return {
     radiusKm: radius,
     dataUpdatedAt: DATA_UPDATED_AT,
     totalCount: inRadius.length,
-    hospitals: structuredClone(inRadius.slice(0, limit)),
+    hospitals: structuredClone(inRadius.slice(0, limit)).map((hospital) =>
+      reopenTomorrow(hospital, now),
+    ),
+  };
+}
+
+const seoulDate = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+// 지금 쉬는 가짜 병원의 다음 진료 시작을 지금 기준 다음 날 09:00으로 맞춥니다.
+// 날짜를 고정해 두면 날이 지난 뒤에 "내일 09:00 시작"이 지난 날짜로 보이기 때문입니다.
+function reopenTomorrow(hospital: Hospital, now: Date): Hospital {
+  const { today } = hospital;
+  if (!today?.nextOpenAt) return hospital;
+  const tomorrow = new Date(now.getTime() + 86_400_000);
+  return {
+    ...hospital,
+    today: {
+      ...today,
+      nextOpenAt: `${seoulDate.format(tomorrow)}T09:00:00+09:00`,
+    },
   };
 }
 
@@ -341,17 +373,18 @@ const symptomQuestions: MockQuestion[] = [
   },
 ];
 
-// 모든 문진이 거치는 기본 정보 5문항입니다.
+// 모든 문진이 거치는 기본 정보 5문항입니다. 개발 서버와 같이 복용약·앓는 병·알레르기는 FREE_TEXT입니다.
+// FREE_TEXT는 말·글로만 답할 수 있고, 버튼으로 답하면 INTAKE_400입니다.
 const basicInfoQuestions: MockQuestion[] = [
   {
     questionId: "q_age_group",
     text: "연세가 어떻게 되세요?",
     answerType: "SINGLE_CHOICE",
     options: [
-      { code: "UNDER_50", label: "50세 미만" },
+      { code: "UNDER_50", label: "50대 이하" },
       { code: "SIXTIES", label: "60대" },
       { code: "SEVENTIES", label: "70대" },
-      { code: "OVER_80", label: "80세 이상" },
+      { code: "OVER_80", label: "80대 이상" },
     ],
     stage: "BASIC_INFO",
     label: "나이대",
@@ -369,24 +402,24 @@ const basicInfoQuestions: MockQuestion[] = [
   },
   {
     questionId: "q_medications",
-    text: "지금 드시는 약이 있나요?",
-    answerType: "YES_NO_UNKNOWN",
+    text: '지금 드시는 약이 있나요? 없으면 "없어요"라고 해 주세요.',
+    answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",
     label: "복용약",
   },
   {
     questionId: "q_conditions",
-    text: "앓고 계신 병이 있나요?",
-    answerType: "YES_NO_UNKNOWN",
+    text: '앓고 계신 병이 있나요? 없으면 "없어요"라고 해 주세요.',
+    answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",
     label: "앓는 병",
   },
   {
     questionId: "q_allergies",
-    text: "먹거나 바르고 나서 이상이 생긴 약이나 음식이 있나요?",
-    answerType: "YES_NO_UNKNOWN",
+    text: '약이나 음식 알레르기가 있나요? 없으면 "없어요"라고 해 주세요.',
+    answerType: "FREE_TEXT",
     options: null,
     stage: "BASIC_INFO",
     label: "알레르기",
@@ -401,7 +434,9 @@ const mockDepartment: DepartmentRecommendation = {
 
 interface MockAnswer {
   questionId: string;
+  // 선택지·예/아니요 답의 code입니다. FREE_TEXT 답은 선택지가 없어 빈 문자열입니다.
   code: string;
+  // 선택지·예/아니요 답은 화면에 보이는 문구, FREE_TEXT 답은 사용자가 쓴 글(앞뒤 공백 제외)입니다.
   label: string;
 }
 
@@ -480,8 +515,15 @@ function collectedOf(intake: MockIntake): string[] {
         ].filter((item): item is string => item !== null)
       : [];
   const labels = sequenceOf(intake);
-  const answered = intake.answers.map((answer, index) => {
-    return `${labels[index].label}: ${answer.label}`;
+  // 서버처럼 선택한 답은 문구만 보여 주고(증상 질문은 이름을 붙임), FREE_TEXT 답은 넣지 않습니다.
+  const answered = intake.answers.flatMap((answer, index) => {
+    const question = labels[index];
+    if (question.answerType === "FREE_TEXT") return [];
+    return [
+      question.stage === "SYMPTOM"
+        ? `${question.label}: ${answer.label}`
+        : answer.label,
+    ];
   });
   return [...start, ...answered];
 }
@@ -562,6 +604,24 @@ export function answerIntake(
   const question = sequenceOf(intake)[intake.answers.length];
   if (request.questionId !== question.questionId) throw intakeConflict(null);
 
+  if (question.answerType === "FREE_TEXT") {
+    // FREE_TEXT는 말·글로만 답할 수 있습니다. 서버처럼 BUTTON이면 400이고, 빈 답도 400입니다.
+    if (request.inputMode === "BUTTON") {
+      throw new ApiError("INTAKE_400", "글이나 말로 답해 주세요.", 400);
+    }
+    const text = request.answer.trim();
+    if (text === "") {
+      throw badRequest("INTAKE_400", "request", "답변을 입력해 주세요");
+    }
+    intake.answers.push({
+      questionId: question.questionId,
+      code: "",
+      label: text,
+    });
+    if (isCompleted(intake)) createSummary(intake);
+    return toIntakeResponse(intake);
+  }
+
   const choices =
     question.answerType === "YES_NO_UNKNOWN"
       ? yesNoUnknownAnswers.map((code) => ({ code, label: yesNoLabels[code] }))
@@ -621,16 +681,28 @@ export function getIntakeDepartment(intakeId: string): IntakeDepartmentResult {
 
 // ---- 요약지 ----
 
-// 건강 정보: 모르면 null, 없다고 하면 [], 있다고 하면 항목을 담습니다.
+// 건강 정보: 모른다고 하면 null, 없다고 하면 [], 있다고 하면 항목을 담습니다.
+// 서버는 AI가 쓴 글을 이름과 설명으로 나눕니다. 가짜 응답은 첫 낱말을 이름, 나머지를 설명으로 둡니다.
+const NONE_ANSWERS = new Set([
+  "없어요",
+  "없음",
+  "없습니다",
+  "아니요",
+  "아니오",
+]);
+const UNKNOWN_ANSWERS = new Set(["잘 모르겠어요", "모르겠어요", "몰라요"]);
+
 function healthInfoOf(
   intake: MockIntake,
   questionId: string,
-  name: string,
 ): CollectedList<HealthInfoItem> {
-  const code = intake.answers.find((a) => a.questionId === questionId)?.code;
-  if (code === "YES") return [{ name, detail: null }];
-  if (code === "NO") return [];
-  return null;
+  const text = intake.answers
+    .find((answer) => answer.questionId === questionId)
+    ?.label.trim();
+  if (text === undefined || UNKNOWN_ANSWERS.has(text)) return null;
+  if (NONE_ANSWERS.has(text)) return [];
+  const [name, ...rest] = text.split(/\s+/);
+  return [{ name, detail: rest.length > 0 ? rest.join(" ") : null }];
 }
 
 function buildContent(intake: MockIntake): SummaryContent {
@@ -666,9 +738,9 @@ function buildContent(intake: MockIntake): SummaryContent {
     onset: onset ?? null,
     onsetDetail: inputMode === "BUTTON" && onset ? onsetLabels[onset] : null,
     extraNote: inputMode === "BUTTON" ? (text ?? null) : null,
-    medications: healthInfoOf(intake, "q_medications", "OO약"),
-    conditions: healthInfoOf(intake, "q_conditions", "OO"),
-    allergies: healthInfoOf(intake, "q_allergies", "OO"),
+    medications: healthInfoOf(intake, "q_medications"),
+    conditions: healthInfoOf(intake, "q_conditions"),
+    allergies: healthInfoOf(intake, "q_allergies"),
     items,
     department: { ...mockDepartment },
     isConfirmed: false,

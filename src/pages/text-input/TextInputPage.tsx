@@ -1,24 +1,54 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
+import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Chip, Notice, PageTitle } from "@/components/ui";
+import { beginButtonIntake } from "@/pages/text-input/beginIntake";
 import { appActions, useAppStore } from "@/stores/appStore";
-
-const symptoms = [
-  "머리",
-  "가슴",
-  "배",
-  "허리",
-  "팔 · 어깨",
-  "다리 · 무릎",
-  "피부",
-  "기타",
-];
-const durations = ["오늘", "2~3일", "일주일 이상"];
+import {
+  bodyPartOptions,
+  createButtonIntakeRequest,
+  onsetOptions,
+} from "@/stores/intakeStart";
 
 export function TextInputPage() {
   const { interview } = useAppStore();
   const navigate = useNavigate();
-  const ready = Boolean(interview.symptom && interview.duration);
+  const intakeRequest = createButtonIntakeRequest(interview);
+  const [starting, setStarting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  // 같은 순간에 두 번 눌러도 문진을 한 번만 시작하도록 state와 별개로 기억합니다.
+  const startingRef = useRef(false);
+  const requestRef = useRef<AbortController | null>(null);
+
+  // 화면을 떠나면 진행 중인 시작 요청을 취소합니다.
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  async function start() {
+    if (!intakeRequest || startingRef.current) {
+      return;
+    }
+    startingRef.current = true;
+    const request = new AbortController();
+    requestRef.current = request;
+    setStarting(true);
+    setMessage(null);
+    try {
+      const result = await beginButtonIntake(intakeRequest, request.signal);
+      if (result.kind === "started") {
+        navigate("/text-input/questions");
+      } else if (result.kind === "emergency") {
+        navigate("/emergency");
+      } else if (result.kind === "failed") {
+        setMessage(result.message);
+      }
+    } finally {
+      startingRef.current = false;
+      if (!request.signal.aborted) {
+        setStarting(false);
+      }
+    }
+  }
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -50,13 +80,13 @@ export function TextInputPage() {
           어디가 불편하세요?
         </h2>
         <div className="grid grid-cols-2 gap-[10px]">
-          {symptoms.map((symptom) => (
+          {bodyPartOptions.map(({ value, label }) => (
             <Chip
-              key={symptom}
-              selected={interview.symptom === symptom}
-              onClick={() => appActions.answer("symptom", symptom)}
+              key={value}
+              selected={interview.symptom === label}
+              onClick={() => appActions.answer("symptom", label)}
             >
-              {symptom}
+              {label}
             </Chip>
           ))}
         </div>
@@ -69,13 +99,13 @@ export function TextInputPage() {
           언제부터 그러세요?
         </h2>
         <div className="flex flex-col gap-[10px]">
-          {durations.map((duration) => (
+          {onsetOptions.map(({ value, label }) => (
             <Chip
-              key={duration}
-              selected={interview.duration === duration}
-              onClick={() => appActions.answer("duration", duration)}
+              key={value}
+              selected={interview.duration === label}
+              onClick={() => appActions.answer("duration", label)}
             >
-              {duration}
+              {label}
             </Chip>
           ))}
         </div>
@@ -101,9 +131,11 @@ export function TextInputPage() {
         <p className="text-center text-[0.889rem] text-muted">
           다음 화면에서 나이, 복용약 등 몇 가지만 더 여쭤볼게요.
         </p>
+        {message && <WarningNotice>{message}</WarningNotice>}
         <Button
-          disabled={!ready}
-          onClick={() => navigate("/text-input/questions")}
+          disabled={!intakeRequest || starting}
+          aria-busy={starting}
+          onClick={() => void start()}
         >
           다음
         </Button>

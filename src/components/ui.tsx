@@ -143,18 +143,22 @@ export function Progress({
 export function Chip({
   children,
   selected,
+  disabled = false,
   onClick,
 }: {
   children: ReactNode;
   selected: boolean;
+  // 요청 중처럼 지금은 고를 수 없을 때입니다. 선택된 모양은 그대로 두고 흐리게만 보입니다.
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       aria-pressed={selected}
+      disabled={disabled}
       onClick={onClick}
-      className={`min-h-[max(44px,3.2rem)] rounded-[16px] border-2 border-brand px-3 py-2 font-bold ${selected ? "bg-brand text-white" : "bg-surface text-brand-strong hover:bg-brand-soft"}`}
+      className={`min-h-[max(44px,3.2rem)] rounded-[16px] border-2 border-brand px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-60 ${selected ? "bg-brand text-white" : "bg-surface text-brand-strong hover:bg-brand-soft"}`}
     >
       {children}
     </button>
