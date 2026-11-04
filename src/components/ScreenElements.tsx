@@ -75,7 +75,7 @@ export function NumberedSteps({ items }: { items: readonly string[] }) {
         <li key={text} className="flex items-start gap-[14px]">
           <span
             aria-hidden="true"
-            className="grid size-[32px] shrink-0 place-items-center rounded-full bg-ink text-[16px] font-bold text-white"
+            className="grid size-[1.778rem] shrink-0 place-items-center rounded-full bg-ink text-[0.889rem] font-bold text-white"
           >
             {index + 1}
           </span>
