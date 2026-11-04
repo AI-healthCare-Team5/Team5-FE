@@ -40,20 +40,22 @@ export function IntakeAnswerChoices({
           </Notice>
         )}
       </div>
-      {/* 선택지가 홀수(네·아니요·잘 모르겠어요 등)면 2열에서 하나가 남고 큰 글자에서 단어가 끊겨서 한 줄에 하나씩 놓습니다. */}
-      <div
-        className={`grid gap-[10px] ${choices.length % 2 === 0 ? "grid-cols-2" : "grid-cols-1"}`}
-      >
-        {choices.map((choice) => (
-          <Chip
+      {/* Figma S03처럼 2열로 놓고, 선택지가 홀수면(네·아니요·잘 모르겠어요) 마지막 하나가 한 줄을 채웁니다. */}
+      <ul className="grid grid-cols-2 gap-[10px]">
+        {choices.map((choice, index) => (
+          <li
             key={choice.code}
-            selected={choice.code === selectedCode}
-            onClick={() => setSelectedCode(choice.code)}
+            className={`grid ${index === choices.length - 1 && choices.length % 2 === 1 ? "col-span-2" : ""}`}
           >
-            {choice.label}
-          </Chip>
+            <Chip
+              selected={choice.code === selectedCode}
+              onClick={() => setSelectedCode(choice.code)}
+            >
+              {choice.label}
+            </Chip>
+          </li>
         ))}
-      </div>
+      </ul>
       <Button
         disabled={!selected}
         onClick={() => {
