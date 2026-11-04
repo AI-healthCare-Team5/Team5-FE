@@ -11,6 +11,7 @@
 - Node.js 22.12 이상 (`.nvmrc` 참고)
 - npm 10.9 이상
 - VS Code를 쓰면 `.vscode/extensions.json`의 추천 확장(ESLint, Prettier, Tailwind CSS IntelliSense, EditorConfig)을 설치합니다.
+- Codex는 신뢰한 프로젝트에서만 프로젝트 훅(`.codex/hooks.json`)을 실행합니다. 처음 한 번 Codex에서 `/hooks`를 열어 이 저장소의 훅을 검토하고 신뢰합니다.
 
 ```bash
 npm ci
