@@ -9,4 +9,5 @@ inclusion: always
 - React, TypeScript, Vite, Tailwind CSS 4, npm을 사용합니다.
 - CI는 GitHub Actions에서 format, lint, typecheck, test, build를 실행합니다.
 - 배포는 Cloudflare Workers Builds Git 연동(`npm run build` 후 `npx wrangler deploy`)으로 관리하며, `/api/*`는 `worker/index.ts`가 `API_ORIGIN` 백엔드로 프록시합니다.
-- 화면과 제품 동작은 요구사항이 정해진 범위에서 구현합니다.
+- 화면과 제품 동작은 요구사항이 정해진 범위에서 구현합니다. 화면 ID와 경로, API·상태·문구 규칙은 AGENTS.md를 따릅니다.
+- 화면을 구현할 때는 `.claude/skills/screen-impl/SKILL.md`, 이슈·커밋·PR을 만들 때는 `.claude/skills/issue-to-pr/SKILL.md`의 절차와 점검 목록을 함께 읽습니다.
