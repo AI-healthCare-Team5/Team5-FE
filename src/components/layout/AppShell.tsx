@@ -49,12 +49,13 @@ export function AppShell() {
         <Link
           to="/"
           aria-label="진료한장 처음으로"
-          className="mb-[3px] flex min-h-[44px] items-center gap-[10px] text-[20px] font-bold tracking-[-0.4px]"
+          className="mb-[3px] flex min-h-[44px] items-center gap-[10px] text-[1.111rem] font-bold tracking-[-0.02em]"
         >
           <img src="/favicon.svg" alt="" className="size-[36px]" />
           진료한장
         </Link>
         <fieldset className="ml-auto min-w-0">
+          {/* eslint-disable-next-line no-restricted-syntax -- 설계상 헤더 글자 크기 컨트롤은 px로 고정합니다. */}
           <legend className="mb-[2px] w-full text-right text-[15px] font-medium text-muted">
             글자 크기
           </legend>
@@ -83,6 +84,7 @@ export function AppShell() {
         <Outlet />
       </main>
       {!hiddenEmergencyBarPaths.has(pathname) && (
+        // eslint-disable-next-line no-restricted-syntax -- 119 바는 설계상 px로 고정합니다.
         <footer className="sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] border-t border-emergency-line bg-emergency-soft px-6 py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px] text-emergency-ink">
           <span className="font-bold">위급하면 바로 119</span>
           <a

@@ -1,39 +1,51 @@
-import { Card, Disclaimer } from "@/components/ui";
-import type { SummaryData } from "@/stores/model";
+import { Disclaimer } from "@/components/ui";
+import { buildSummaryRows } from "@/components/summary/summaryRows";
+import type { SummaryContent } from "@/components/summary/types";
 
-export function SummaryDocument({ summary }: { summary: SummaryData }) {
-  const items = [
-    ["나이대 · 성별", `${summary.age} · ${summary.gender}`],
-    ["주된 증상", summary.symptom],
-    ["언제부터", summary.duration],
-    ["붓기", summary.swelling],
-    ["넘어진 적", summary.fall],
-    ["복용 중인 약", summary.medicine],
-    ["앓고 있는 병", summary.conditions],
-    ["알레르기", summary.allergy],
-    ["안내된 진료과", summary.department],
-  ];
+// S06 요약지와 H02 기록 상세가 함께 씁니다. 데이터와 머리말 문구만 props로 받습니다.
+export function SummaryDocument({
+  summary,
+  caption,
+  large = false,
+}: {
+  summary: SummaryContent;
+  caption: string;
+  large?: boolean;
+}) {
+  const rows = buildSummaryRows(summary);
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden p-0">
-        <div className="bg-ink p-4 text-white">
-          <h2 className="text-[1.222rem] font-bold">진료 요약지</h2>
-          <p className="text-[0.833rem]">의사 선생님께 보여주세요</p>
-        </div>
-        <dl className="divide-y divide-line px-4">
-          {items.map(([title, value]) => (
-            <div key={title} className="py-4">
-              <dt className="mb-1 text-[0.833rem] text-muted">{title}</dt>
-              <dd
-                className={`font-semibold ${title === "안내된 진료과" ? "text-brand-strong" : ""}`}
-              >
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </Card>
-      <Disclaimer />
+    <div className="overflow-hidden rounded-[20px] border border-line bg-surface">
+      <div className="bg-ink px-5 py-4 text-white">
+        <h2
+          className={`font-bold ${large ? "text-[1.358rem]" : "text-[1.111rem]"}`}
+        >
+          진료 요약지
+        </h2>
+        <p
+          className={`text-brand-ring ${large ? "text-[1.086rem]" : "text-[0.889rem]"}`}
+        >
+          {caption}
+        </p>
+      </div>
+      <dl className="divide-y divide-line px-5">
+        {rows.map(({ key, label, value }) => (
+          <div key={key} className="py-4">
+            <dt
+              className={`mb-1 font-medium text-subtle ${large ? "text-[1.086rem]" : "text-[0.889rem]"}`}
+            >
+              {label}
+            </dt>
+            <dd
+              className={`font-bold break-words ${large ? "text-[1.358rem]" : "text-[1.111rem]"} ${key === "department" ? "text-brand-strong" : ""}`}
+            >
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="border-t border-line bg-notice px-5 py-4">
+        <Disclaimer />
+      </div>
     </div>
   );
 }

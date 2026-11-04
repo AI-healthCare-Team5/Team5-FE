@@ -29,6 +29,7 @@ description: 진료한장 저장소에서 기능 작업을 이슈 생성부터 �
 
 ## 4. PR
 
+- PR을 만들기 전에 CONTRIBUTING.md의 "PR 전 자기 검토 체크리스트"에서 변경 범위에 해당하는 항목을 확인합니다. 확인하지 못한 항목은 PR 본문의 "확인하지 못한 것"에 적습니다.
 - `.github/pull_request_template.md` 형식으로 본문을 채워 `gh pr create`를 실행합니다.
 - 제목은 커밋 규칙과 같은 형식을 사용합니다.
 - 본문에 `Closes #이슈번호`를 넣습니다.
