@@ -1,16 +1,24 @@
 import type { BodyPart, InputMode, Onset } from "@/api/enums";
 import type { Interview } from "@/stores/model";
 
-// POST /api/intakes 요청 본문입니다. 실제 호출과 src/api의 타입은 #26에서 연결합니다.
-export interface IntakeStartRequest {
-  inputMode: InputMode;
-  // VOICE·TEXT일 때 필수입니다. BUTTON일 때는 "더 알려주실 내용"입니다.
-  text?: string;
-  // BUTTON일 때 필수입니다.
-  bodyPart?: BodyPart;
-  // BUTTON일 때 필수입니다.
-  onset?: Onset;
+// VOICE·TEXT 입력은 말하거나 적은 내용(text)이 필수입니다.
+export interface FreeIntakeStartRequest {
+  inputMode: Exclude<InputMode, "BUTTON">;
+  text: string;
 }
+
+// BUTTON 입력은 부위와 시작 시점이 필수이고, text는 "더 알려주실 내용"입니다.
+export interface ButtonIntakeStartRequest {
+  inputMode: "BUTTON";
+  bodyPart: BodyPart;
+  onset: Onset;
+  text?: string;
+}
+
+// POST /api/intakes 요청 본문입니다. 실제 호출과 src/api의 타입은 #26에서 연결합니다.
+// inputMode로 필수 필드를 나눠, 필수 값이 빠진 요청은 타입 검사에서 막습니다.
+export type IntakeStartRequest =
+  FreeIntakeStartRequest | ButtonIntakeStartRequest;
 
 export interface ChoiceOption<T extends string> {
   value: T;
@@ -46,7 +54,7 @@ function findValue<T extends string>(
 // 부위나 시작 시점을 고르지 않았으면 null입니다. 더 알려주실 내용은 비어 있으면 보내지 않습니다.
 export function createButtonIntakeRequest(
   interview: Interview,
-): IntakeStartRequest | null {
+): ButtonIntakeStartRequest | null {
   const bodyPart = findValue(bodyPartOptions, interview.symptom);
   const onset = findValue(onsetOptions, interview.duration);
   if (!bodyPart || !onset) {

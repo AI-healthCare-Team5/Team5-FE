@@ -24,6 +24,8 @@ interface AppState {
   returnTo: string;
   // "로그인하고 보관하기"로 로그인한 경우 보관할 요약지입니다.
   saveTarget: SaveTarget | null;
+  // 지금 요약지를 내 기록에 보관했는지. 로그인·동의를 거쳐 S06으로 돌아와도 유지합니다.
+  summarySaved: boolean;
 }
 
 // 카카오를 다녀오거나 새로고침해도 로그인 전에 기억한 내용으로 이어집니다.
@@ -38,6 +40,7 @@ const initialState: AppState = {
   records: [],
   returnTo: loginIntent.returnTo,
   saveTarget: loginIntent.saveTarget,
+  summarySaved: false,
 };
 
 let state: AppState = initialState;
@@ -69,7 +72,11 @@ export const appActions = {
     update({ interview: { ...state.interview, [key]: value } });
   },
   startInterview() {
-    update({ interview: { ...initialState.interview }, intakeStart: null });
+    update({
+      interview: { ...initialState.interview },
+      intakeStart: null,
+      summarySaved: false,
+    });
   },
   prepareIntake(request: IntakeStartRequest) {
     update({ intakeStart: request });
@@ -111,7 +118,7 @@ export const appActions = {
       createdAt: new Date().toISOString(),
       summary: createSummary(state.interview),
     };
-    update({ records: [record, ...state.records] });
+    update({ records: [record, ...state.records], summarySaved: true });
   },
   deleteRecord(id: string) {
     const records = state.records.filter((record) => record.id !== id);
@@ -128,6 +135,7 @@ export const appActions = {
       records: [],
       returnTo: "/records",
       saveTarget: null,
+      summarySaved: false,
     });
   },
   withdraw() {
@@ -137,6 +145,7 @@ export const appActions = {
       records: [],
       returnTo: "/records",
       saveTarget: null,
+      summarySaved: false,
     });
   },
 };

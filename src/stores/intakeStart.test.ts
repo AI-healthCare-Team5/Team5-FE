@@ -4,6 +4,7 @@ import { appActions, getAppState } from "@/stores/appStore";
 import {
   bodyPartOptions,
   createButtonIntakeRequest,
+  type IntakeStartRequest,
   onsetOptions,
 } from "@/stores/intakeStart";
 
@@ -66,5 +67,26 @@ describe("문진 시작 요청 상태", () => {
 
     appActions.startInterview();
     expect(getAppState().intakeStart).toBeNull();
+    expect(getAppState().summarySaved).toBe(false);
+  });
+
+  it("입력 방식마다 필수 값이 빠진 요청은 타입 검사에서 막는다", () => {
+    const invalid: IntakeStartRequest[] = [
+      // @ts-expect-error BUTTON은 bodyPart와 onset이 필수입니다.
+      { inputMode: "BUTTON" },
+      // @ts-expect-error BUTTON은 onset이 필수입니다.
+      { inputMode: "BUTTON", bodyPart: "HEAD" },
+      // @ts-expect-error TEXT는 text가 필수입니다.
+      { inputMode: "TEXT" },
+      // @ts-expect-error VOICE는 text가 필수입니다.
+      { inputMode: "VOICE" },
+    ];
+    const valid: IntakeStartRequest[] = [
+      { inputMode: "TEXT", text: "무릎이 아파요" },
+      { inputMode: "BUTTON", bodyPart: "HEAD", onset: "TODAY" },
+    ];
+
+    expect(invalid).toHaveLength(4);
+    expect(valid).toHaveLength(2);
   });
 });
