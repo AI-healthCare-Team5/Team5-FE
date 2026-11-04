@@ -63,7 +63,8 @@ export function getAppState() {
 }
 
 export function useAppStore() {
-  return useSyncExternalStore(subscribe, getAppState);
+  // 세 번째 인자는 테스트의 renderToStaticMarkup처럼 서버 렌더링으로 그릴 때 씁니다.
+  return useSyncExternalStore(subscribe, getAppState, getAppState);
 }
 
 export const appActions = {
