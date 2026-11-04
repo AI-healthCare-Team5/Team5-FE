@@ -2,7 +2,8 @@ import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
 import type { SummaryContent } from "@/api/summaries";
 import { requestCurrentPosition } from "@/components/map/currentPosition";
-import type { CurrentLocation, EmergencyEntry } from "@/stores/emergency";
+import type { MapLocation } from "@/components/map/types";
+import type { EmergencyEntry } from "@/stores/emergency";
 import { createSampleRecords } from "@/stores/fixtures";
 import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
@@ -16,7 +17,8 @@ interface AppState {
   interview: Interview;
   // 문진 응답이 응급 전환이면 채웁니다. URL로 바로 들어오면 null이고 E01은 119 안내만 보여 줍니다.
   emergency: EmergencyEntry | null;
-  currentLocation: CurrentLocation;
+  // E01에서 받은 현재 위치입니다. 다시 들어와도 권한을 다시 묻지 않고 씁니다. 메모리에만 둡니다.
+  currentLocation: MapLocation | null;
   loggedIn: boolean;
   nickname: string;
   recordConsent: boolean;
@@ -34,7 +36,7 @@ const loginIntent = readLoginIntent();
 const initialState: AppState = {
   interview: {},
   emergency: null,
-  currentLocation: { status: "unasked" },
+  currentLocation: null,
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,
@@ -59,6 +61,18 @@ function subscribe(listener: () => void) {
   };
 }
 
+// 진행 중인 위치 요청입니다. 같은 때에 여러 번 불러도(StrictMode 포함) 브라우저에는 한 번만 묻습니다.
+let locationRequest: Promise<MapLocation | null> | null = null;
+// 흐름을 다시 시작하거나 로그아웃·탈퇴하면 늘립니다. 그 전에 시작한 요청의 결과는 기억하지 않습니다.
+let locationEpoch = 0;
+
+// 응급 전환 정보와 위치, 진행 중인 위치 요청을 함께 잊습니다.
+function forgetEmergency(): Pick<AppState, "emergency" | "currentLocation"> {
+  locationEpoch += 1;
+  locationRequest = null;
+  return { emergency: null, currentLocation: null };
+}
+
 export function getAppState() {
   return state;
 }
@@ -77,8 +91,7 @@ export const appActions = {
     resetIntakeFlow();
     update({
       interview: { ...initialState.interview },
-      emergency: null,
-      currentLocation: initialState.currentLocation,
+      ...forgetEmergency(),
       summarySaved: false,
     });
   },
@@ -90,23 +103,30 @@ export const appActions = {
   clearEmergency() {
     update({ emergency: null });
   },
-  // 위치가 없을 때 한 번만 묻습니다. 거부했거나 받지 못했으면 다시 묻지 않습니다.
-  askCurrentLocationOnce() {
-    if (state.currentLocation.status !== "unasked") {
-      return;
+  // 현재 위치를 묻고, 받으면 기억합니다. 이미 받은 위치가 있으면 다시 묻지 않고 그 위치를 돌려줍니다.
+  // 권한 창이 뜰 수 있으므로 권한이 이미 허용됐거나 사용자가 버튼을 눌렀을 때만 부릅니다.
+  // 거부·실패면 null이고 기억하지 않으므로, 다시 부르면 다시 묻습니다.
+  requestCurrentLocation(): Promise<MapLocation | null> {
+    if (state.currentLocation) {
+      return Promise.resolve(state.currentLocation);
     }
-    update({ currentLocation: { status: "asking" } });
-    void requestCurrentPosition().then((location) => {
-      // 묻는 동안 새 문진을 시작했으면 결과를 쓰지 않습니다.
-      if (state.currentLocation.status !== "asking") {
-        return;
+    if (locationRequest) {
+      return locationRequest;
+    }
+    const epoch = locationEpoch;
+    const request = requestCurrentPosition().then((location) => {
+      // 묻는 동안 흐름을 다시 시작했거나 로그아웃했으면 늦게 온 결과를 쓰지 않습니다.
+      if (epoch !== locationEpoch) {
+        return null;
       }
-      update({
-        currentLocation: location
-          ? { status: "found", location }
-          : { status: "unavailable" },
-      });
+      locationRequest = null;
+      if (location) {
+        update({ currentLocation: location });
+      }
+      return location;
     });
+    locationRequest = request;
+    return request;
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });
@@ -166,6 +186,7 @@ export const appActions = {
       recordConsent: records.length === 0 ? false : state.recordConsent,
     });
   },
+  // 함께 쓰는 기기에서 다음 사람이 보지 않도록, 로그아웃·탈퇴하면 말씀하신 내용과 위치도 지웁니다.
   logout() {
     update({
       loggedIn: false,
@@ -175,6 +196,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      ...forgetEmergency(),
     });
   },
   withdraw() {
@@ -185,6 +207,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      ...forgetEmergency(),
     });
   },
 };

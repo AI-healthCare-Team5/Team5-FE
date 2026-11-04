@@ -879,7 +879,7 @@ describe("가짜 문진의 응급 전환", () => {
   });
 });
 
-describe("가짜 응급실과 응급 카드", () => {
+describe("가짜 응급실", () => {
   it("응급실 2곳을 가까운 순으로 가짜 이름·전화번호와 24시간으로 돌려준다", async () => {
     const api = await loadMockApi();
 
@@ -958,21 +958,6 @@ describe("가짜 응급실과 응급 카드", () => {
       });
     }
   });
-
-  it("응급 카드는 받은 문진 ID로 샘플을 돌려주고 건강 정보의 null과 []가 구분된다", async () => {
-    const api = await loadMockApi();
-    const intakeId = "3f2a9c1e-0000-4000-8000-000000000001";
-
-    const card = await api.getEmergencyCard(intakeId);
-
-    expect(card.intakeId).toBe(intakeId);
-    expect(card.redFlagCategory).toBe("CHEST_PAIN");
-    expect(card.medications).toEqual([{ name: "OO약", detail: null }]);
-    expect(card.conditions).toEqual([]);
-    expect(card.allergies).toBeNull();
-    expect(card.guardian?.phoneNumber).toBe("010-0000-0000");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
 });
 
 // mock 분기도 실제 fetch처럼 이미 취소된 signal이면 아무 일도 하지 않고 AbortError로 reject합니다.
@@ -1027,10 +1012,6 @@ describe("가짜 응답의 취소", () => {
     [
       "getEmergencyRooms",
       (api, signal) => api.getEmergencyRooms({ regionCode: "51720" }, signal),
-    ],
-    [
-      "getEmergencyCard",
-      (api, signal) => api.getEmergencyCard(intakeId, signal),
     ],
   ];
 

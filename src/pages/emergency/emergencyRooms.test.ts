@@ -6,11 +6,21 @@ import {
   type HospitalSearchResult,
 } from "@/api/hospitals";
 import {
+  getGeolocationPermission,
+  requestCurrentPosition,
+} from "@/components/map/currentPosition";
+import {
   findEmergencyRooms,
   formatEmergencyRoomMeta,
+  locateWithoutPrompt,
 } from "@/pages/emergency/emergencyRooms";
+import { appActions, getAppState } from "@/stores/appStore";
 
 vi.mock("@/api/hospitals", () => ({ getEmergencyRooms: vi.fn() }));
+vi.mock("@/components/map/currentPosition", () => ({
+  getGeolocationPermission: vi.fn(),
+  requestCurrentPosition: vi.fn(),
+}));
 
 const location = { latitude: 37.6971, longitude: 127.8887 };
 
@@ -40,28 +50,71 @@ function result(hospitals: Hospital[]): HospitalSearchResult {
 
 beforeEach(() => {
   vi.mocked(getEmergencyRooms).mockReset();
+  vi.mocked(getGeolocationPermission).mockReset();
+  vi.mocked(requestCurrentPosition).mockReset();
+  appActions.startInterview();
+});
+
+describe("E01에 들어올 때 위치 정하기", () => {
+  it("권한이 이미 허용돼 있으면 조용히 위치를 받아 기억한다", async () => {
+    vi.mocked(getGeolocationPermission).mockResolvedValue("granted");
+    vi.mocked(requestCurrentPosition).mockResolvedValue(location);
+
+    await expect(locateWithoutPrompt()).resolves.toEqual(location);
+
+    expect(getAppState().currentLocation).toEqual(location);
+  });
+
+  it.each(["prompt", "denied", "unknown"] as const)(
+    "권한이 %s이면 권한 창을 띄우지 않고(위치를 묻지 않고) null이다",
+    async (permission) => {
+      vi.mocked(getGeolocationPermission).mockResolvedValue(permission);
+
+      await expect(locateWithoutPrompt()).resolves.toBeNull();
+
+      expect(requestCurrentPosition).not.toHaveBeenCalled();
+    },
+  );
+
+  it("이미 받은 위치가 있으면 권한도 위치도 다시 묻지 않는다", async () => {
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+    await appActions.requestCurrentLocation();
+    vi.mocked(requestCurrentPosition).mockClear();
+
+    await expect(locateWithoutPrompt()).resolves.toEqual(location);
+
+    expect(getGeolocationPermission).not.toHaveBeenCalled();
+    expect(requestCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it("허용돼 있어도 측정에 실패하면 null이고 기억하지 않는다", async () => {
+    vi.mocked(getGeolocationPermission).mockResolvedValue("granted");
+    vi.mocked(requestCurrentPosition).mockResolvedValue(null);
+
+    await expect(locateWithoutPrompt()).resolves.toBeNull();
+
+    expect(getAppState().currentLocation).toBeNull();
+  });
 });
 
 describe("E01 가까운 응급실", () => {
-  it("좌표로 기본 반경·개수의 응급실을 찾고 신호를 넘긴다", async () => {
+  it("좌표로 기본 반경·개수의 응급실을 찾고, 갱신일 안내에 쓰도록 응답을 그대로 돌려준다", async () => {
     vi.mocked(getEmergencyRooms).mockResolvedValue(result([room]));
     const signal = new AbortController().signal;
 
-    await expect(findEmergencyRooms(location, signal)).resolves.toEqual([room]);
+    await expect(findEmergencyRooms(location, signal)).resolves.toEqual(
+      result([room]),
+    );
 
     expect(getEmergencyRooms).toHaveBeenCalledWith(location, signal);
   });
 
-  it("위치가 없으면 요청하지 않고 빈 목록이다", async () => {
-    await expect(findEmergencyRooms(null)).resolves.toEqual([]);
-
-    expect(getEmergencyRooms).not.toHaveBeenCalled();
-  });
-
-  it("0건이면 빈 목록이다", async () => {
+  it("0건이면 빈 목록의 응답이다", async () => {
     vi.mocked(getEmergencyRooms).mockResolvedValue(result([]));
 
-    await expect(findEmergencyRooms(location)).resolves.toEqual([]);
+    await expect(findEmergencyRooms(location)).resolves.toMatchObject({
+      hospitals: [],
+    });
   });
 
   it.each([
@@ -69,10 +122,10 @@ describe("E01 가까운 응급실", () => {
     ["HOSPITAL_500", new ApiError("HOSPITAL_500", "", 500)],
     ["네트워크 오류", new ApiError(NETWORK_ERROR, "", 0)],
     ["형식 오류", new ApiError(INVALID_RESPONSE, "", 200)],
-  ])("%s이면 119 안내만 남도록 빈 목록이다", async (_name, error) => {
+  ])("%s이면 119 안내만 남도록 null이다", async (_name, error) => {
     vi.mocked(getEmergencyRooms).mockRejectedValue(error);
 
-    await expect(findEmergencyRooms(location)).resolves.toEqual([]);
+    await expect(findEmergencyRooms(location)).resolves.toBeNull();
   });
 
   it("취소는 그대로 던진다", async () => {

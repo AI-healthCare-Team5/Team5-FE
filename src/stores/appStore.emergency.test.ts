@@ -6,6 +6,7 @@ vi.mock("@/components/map/currentPosition", () => ({
   requestCurrentPosition: vi.fn(),
 }));
 
+// 모든 값은 가짜 데이터입니다.
 const location = { latitude: 37.6971, longitude: 127.8887 };
 const entry = {
   intakeId: "3f2a9c1e-0000-4000-8000-000000000001",
@@ -20,10 +21,14 @@ function deferPosition() {
       settle = resolve;
     }),
   );
-  return (value: typeof location | null) => {
-    settle(value);
-    return Promise.resolve();
-  };
+  return settle;
+}
+
+function logIn() {
+  appActions.completeLogin(
+    { nickname: "봄날", needsRecordConsent: false },
+    { returnTo: "/", saveTarget: null },
+  );
 }
 
 beforeEach(() => {
@@ -42,58 +47,96 @@ describe("응급 전환 상태", () => {
   });
 });
 
-describe("현재 위치 한 번 묻기", () => {
-  it("묻는 동안 asking이고 허용하면 좌표를 기억한다", async () => {
-    const settle = deferPosition();
+describe("현재 위치 요청", () => {
+  it("받은 위치를 기억하고 돌려준다", async () => {
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
 
-    appActions.askCurrentLocationOnce();
-    expect(getAppState().currentLocation).toEqual({ status: "asking" });
-
-    await settle(location);
-
-    expect(getAppState().currentLocation).toEqual({
-      status: "found",
+    await expect(appActions.requestCurrentLocation()).resolves.toEqual(
       location,
-    });
+    );
+
+    expect(getAppState().currentLocation).toEqual(location);
   });
 
-  it("거부하거나 받지 못하면 unavailable이고 다시 묻지 않는다", async () => {
-    const settle = deferPosition();
+  it("기억한 위치가 있으면 다시 묻지 않는다(다시 들어와도 권한 창이 뜨지 않는다)", async () => {
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+    await appActions.requestCurrentLocation();
 
-    appActions.askCurrentLocationOnce();
-    await settle(null);
-    appActions.askCurrentLocationOnce();
-
-    expect(getAppState().currentLocation).toEqual({ status: "unavailable" });
-    expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
-  });
-
-  it("묻는 중에 다시 불러도 한 번만 묻는다", () => {
-    deferPosition();
-
-    appActions.askCurrentLocationOnce();
-    appActions.askCurrentLocationOnce();
+    await expect(appActions.requestCurrentLocation()).resolves.toEqual(
+      location,
+    );
 
     expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
   });
 
-  it("좌표를 받은 뒤에는 다시 묻지 않는다", async () => {
+  it("묻는 중에 다시 불러도(StrictMode, 두 번 누름) 한 번만 묻고 같은 결과를 받는다", async () => {
     const settle = deferPosition();
 
-    appActions.askCurrentLocationOnce();
-    await settle(location);
-    appActions.askCurrentLocationOnce();
+    const first = appActions.requestCurrentLocation();
+    const second = appActions.requestCurrentLocation();
+    settle(location);
 
+    await expect(first).resolves.toEqual(location);
+    await expect(second).resolves.toEqual(location);
     expect(requestCurrentPosition).toHaveBeenCalledTimes(1);
   });
 
-  it("묻는 동안 새 문진을 시작하면 늦게 온 결과를 쓰지 않고 다시 물을 수 있다", async () => {
+  it("거부하거나 받지 못하면 기억하지 않고, 다시 누르면 다시 묻는다", async () => {
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(null);
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+
+    await expect(appActions.requestCurrentLocation()).resolves.toBeNull();
+    expect(getAppState().currentLocation).toBeNull();
+
+    await expect(appActions.requestCurrentLocation()).resolves.toEqual(
+      location,
+    );
+    expect(requestCurrentPosition).toHaveBeenCalledTimes(2);
+  });
+
+  it("묻는 동안 새 문진을 시작하면 늦게 온 위치를 쓰지 않는다", async () => {
     const settle = deferPosition();
 
-    appActions.askCurrentLocationOnce();
+    const asking = appActions.requestCurrentLocation();
     appActions.startInterview();
-    await settle(location);
+    settle(location);
 
-    expect(getAppState().currentLocation).toEqual({ status: "unasked" });
+    await expect(asking).resolves.toBeNull();
+    expect(getAppState().currentLocation).toBeNull();
   });
+});
+
+describe("로그아웃·탈퇴", () => {
+  it.each([
+    ["로그아웃", () => appActions.logout()],
+    ["탈퇴", () => appActions.withdraw()],
+  ])("%s하면 말씀하신 내용과 위치를 지운다", async (_name, leave) => {
+    logIn();
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+    appActions.enterEmergency(entry);
+    await appActions.requestCurrentLocation();
+
+    leave();
+
+    expect(getAppState().emergency).toBeNull();
+    expect(getAppState().currentLocation).toBeNull();
+  });
+
+  it.each([
+    ["로그아웃", () => appActions.logout()],
+    ["탈퇴", () => appActions.withdraw()],
+  ])(
+    "위치를 묻는 중에 %s하면 늦게 온 위치를 기억하지 않는다",
+    async (_name, leave) => {
+      logIn();
+      const settle = deferPosition();
+      const asking = appActions.requestCurrentLocation();
+
+      leave();
+      settle(location);
+
+      await expect(asking).resolves.toBeNull();
+      expect(getAppState().currentLocation).toBeNull();
+    },
+  );
 });

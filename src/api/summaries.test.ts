@@ -2,13 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, INVALID_RESPONSE } from "@/api/errors";
 import {
   confirmSummary,
-  getEmergencyCard,
   getSummary,
   isSummaryConflict,
   pollSummary,
   retrySummary,
   updateSummary,
-  type EmergencyCardResponse,
   type SummaryContent,
   type SummaryResponse,
 } from "@/api/summaries";
@@ -209,68 +207,6 @@ describe("요약지 요청", () => {
       await expect(promise).rejects.toMatchObject({ code: "SUMMARY_409" });
     },
   );
-});
-
-describe("응급 카드", () => {
-  const card: EmergencyCardResponse = {
-    intakeId,
-    createdAt: "2026-11-04T10:00:00+09:00",
-    userUtterance: "가슴이 답답해요",
-    redFlagCategory: "CHEST_PAIN",
-    mainSymptom: "가슴 답답함",
-    onsetDetail: "오늘",
-    ageGroup: "SEVENTIES",
-    gender: "FEMALE",
-    medications: [{ name: "OO약", detail: null }],
-    conditions: [],
-    allergies: null,
-    guardian: { relation: "DAUGHTER", phoneNumber: "010-0000-0000" },
-  };
-
-  it("GET /api/intakes/{intakeId}/emergency-card를 본문 없이 부른다", async () => {
-    fetchMock.mockResolvedValueOnce(ok(card));
-
-    await expect(getEmergencyCard(intakeId)).resolves.toEqual(card);
-
-    const { url, init } = calledRequest();
-    expect(url).toBe(`/api/intakes/${intakeId}/emergency-card`);
-    expect(init.method).toBe("GET");
-    expect(init.body).toBeUndefined();
-  });
-
-  it("문진 ID를 경로에 안전하게 넣는다", async () => {
-    fetchMock.mockResolvedValueOnce(ok(card));
-
-    await getEmergencyCard("a/b");
-
-    expect(calledRequest().url).toBe("/api/intakes/a%2Fb/emergency-card");
-  });
-
-  it("못 물은 항목의 null과 보호자 없음을 그대로 돌려준다", async () => {
-    const unasked: EmergencyCardResponse = {
-      ...card,
-      mainSymptom: null,
-      onsetDetail: null,
-      ageGroup: null,
-      gender: null,
-      medications: null,
-      conditions: null,
-      allergies: null,
-      guardian: null,
-    };
-    fetchMock.mockResolvedValueOnce(ok(unasked));
-
-    await expect(getEmergencyCard(intakeId)).resolves.toEqual(unasked);
-  });
-
-  it("응급 전환되지 않은 문진은 SUMMARY_409 ApiError로 던진다", async () => {
-    fetchMock.mockResolvedValueOnce(fail(409, "SUMMARY_409"));
-
-    const promise = getEmergencyCard(intakeId);
-
-    await expect(promise).rejects.toBeInstanceOf(ApiError);
-    await expect(promise).rejects.toMatchObject({ code: "SUMMARY_409" });
-  });
 });
 
 describe("요약지 오류 분류", () => {

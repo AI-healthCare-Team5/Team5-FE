@@ -52,7 +52,10 @@ describe("EmergencyPage", () => {
     expect(renderPage()).not.toContain("말씀하신 내용");
   });
 
-  it("응급실을 찾기 전에는 가까운 응급실 영역을 그리지 않는다", () => {
-    expect(renderPage()).not.toContain("가까운 응급실");
+  it("처음 그릴 때는 권한을 확인하는 중이라 응급실 영역과 찾기 버튼을 그리지 않고 119가 먼저 보인다", () => {
+    const markup = renderPage();
+
+    expect(markup).not.toContain("가까운 응급실");
+    expect(markup.indexOf('href="tel:119"')).toBeGreaterThan(-1);
   });
 });

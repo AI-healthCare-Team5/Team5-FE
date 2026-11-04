@@ -35,7 +35,6 @@ import type {
   IntakeStartRequest,
 } from "@/api/intakes";
 import type {
-  EmergencyCardResponse,
   HealthInfoItem,
   SummaryConfirmResult,
   SummaryContent,
@@ -796,25 +795,6 @@ function buildContent(intake: MockIntake): SummaryContent {
     items,
     department: { ...mockDepartment },
     isConfirmed: false,
-  };
-}
-
-// 가짜 문진에는 응급 전환 흐름이 없어 서버의 SUMMARY_404·409 없이 어떤 문진 ID든 샘플을 돌려줍니다.
-// 건강 정보의 세 상태(null, [], 항목 있음)를 한 화면에서 확인할 수 있게 채웁니다.
-export function getEmergencyCard(intakeId: string): EmergencyCardResponse {
-  return {
-    intakeId,
-    createdAt: SUMMARY_CREATED_AT,
-    userUtterance: "가슴이 답답해요",
-    redFlagCategory: "CHEST_PAIN",
-    mainSymptom: "가슴 답답함",
-    onsetDetail: "오늘",
-    ageGroup: "SEVENTIES",
-    gender: "FEMALE",
-    medications: [{ name: "OO약", detail: null }],
-    conditions: [],
-    allergies: null,
-    guardian: { relation: "DAUGHTER", phoneNumber: "010-0000-0000" },
   };
 }
 
