@@ -139,12 +139,6 @@ export const SUMMARY_POLL_INTERVAL_MS = 1000;
 // 폴링을 시작하고 이 시간 안에 끝나지 않으면 진행 중인 요청을 취소하고 다시 만들기를 안내합니다.
 export const SUMMARY_POLL_TIMEOUT_MS = 30_000;
 
-// 문진이나 요약지를 찾을 수 없거나(404) 내 것이 아닌(403) 경우입니다.
-// 지워졌거나 다른 브라우저의 것이라 더는 쓸 수 없으므로, 화면은 기억해 둔 ID를 지우고 처음으로 보냅니다.
-export function isSummaryGone(error: unknown): boolean {
-  return isApiError(error) && /^(INTAKE|SUMMARY)_(403|404)$/.test(error.code);
-}
-
 // SUMMARY_409입니다. 수정·확인은 요약지가 아직 만드는 중이거나 실패했을 때,
 // 다시 만들기는 이미 만드는 중이거나 만들어졌을 때 받습니다.
 export function isSummaryConflict(error: unknown): boolean {

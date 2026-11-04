@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
 import type { SummaryContent } from "@/api/summaries";
 import { createSampleRecords } from "@/stores/fixtures";
-import type { IntakeStartRequest } from "@/stores/intakeStart";
+import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
   readLoginIntent,
   type LoginIntent,
@@ -12,8 +12,6 @@ import type { Interview, SavedRecord } from "@/stores/model";
 
 interface AppState {
   interview: Interview;
-  // S04에서 "다음"을 누를 때 만든 문진 시작 요청입니다. 실제 호출은 #26에서 연결합니다.
-  intakeStart: IntakeStartRequest | null;
   loggedIn: boolean;
   nickname: string;
   recordConsent: boolean;
@@ -30,7 +28,6 @@ const loginIntent = readLoginIntent();
 
 const initialState: AppState = {
   interview: {},
-  intakeStart: null,
   loggedIn: false,
   nickname: "봄날",
   recordConsent: false,
@@ -68,15 +65,13 @@ export const appActions = {
   answer(key: keyof Interview, value: string) {
     update({ interview: { ...state.interview, [key]: value } });
   },
+  // 흐름을 처음부터 다시 시작하는 곳(S01의 시작 버튼)에서 부릅니다. 이전 문진과 요약지 ID도 함께 지웁니다.
   startInterview() {
+    resetIntakeFlow();
     update({
       interview: { ...initialState.interview },
-      intakeStart: null,
       summarySaved: false,
     });
-  },
-  prepareIntake(request: IntakeStartRequest) {
-    update({ intakeStart: request });
   },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });

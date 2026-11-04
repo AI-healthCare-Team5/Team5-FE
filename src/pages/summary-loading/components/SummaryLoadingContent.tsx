@@ -1,5 +1,5 @@
 import { ScreenIcon, Spinner } from "@/components/ScreenElements";
-import { WarningNotice } from "@/components/summary/WarningNotice";
+import { WarningNotice } from "@/components/WarningNotice";
 import { Button, Card, PageTitle } from "@/components/ui";
 import { buildStepRows } from "@/pages/summary-loading/stepRows";
 import type { SummaryLoadingView } from "@/pages/summary-loading/summaryLoading";

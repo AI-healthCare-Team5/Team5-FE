@@ -533,14 +533,4 @@ describe("S06a 화면을 떠날 때", () => {
 
     expect(exits).toEqual([]);
   });
-
-  it("세션을 여는 중에 떠나면 조회를 시작하지 않는다", async () => {
-    const { loading } = setup();
-
-    const started = loading.start();
-    loading.dispose();
-    await started;
-
-    expect(pollMock).not.toHaveBeenCalled();
-  });
 });

@@ -141,7 +141,8 @@ describe("S06 불러오기", () => {
     const { screen, views, last, exits } = setup();
 
     const loading = screen.load();
-    expect(views).toHaveLength(0);
+    // 응답이 오기 전에는 불러오는 중으로만 보입니다.
+    expect(views.every((view) => view.phase === "loading")).toBe(true);
     await loading;
 
     expect(getMock).toHaveBeenCalledTimes(1);
@@ -269,16 +270,6 @@ describe("S06 화면을 떠날 때", () => {
 
     expect(exits).toEqual([]);
     expect(views).toHaveLength(viewCount);
-  });
-
-  it("세션을 여는 중에 떠나면 요청하지 않는다", async () => {
-    const { screen } = setup();
-
-    const loading = screen.load();
-    screen.dispose();
-    await loading;
-
-    expect(getMock).not.toHaveBeenCalled();
   });
 });
 

@@ -1,15 +1,14 @@
-import { getErrorMessage } from "@/api/errors";
+import { getErrorMessage, isSessionGone } from "@/api/errors";
 import { cancelIntake } from "@/api/intakes";
 import {
   isSummaryConflict,
-  isSummaryGone,
   pollSummary,
   retrySummary,
   type SummaryStepState,
 } from "@/api/summaries";
-import { openSummarySession } from "@/stores/openSummarySession";
 import {
   clearSummarySession,
+  readSummarySession,
   type SummarySession,
 } from "@/stores/summarySession";
 
@@ -89,7 +88,7 @@ export function createSummaryLoading(
   }
 
   function fail(error: unknown) {
-    if (isSummaryGone(error)) {
+    if (isSessionGone(error)) {
       leave("start");
       return;
     }
@@ -144,13 +143,7 @@ export function createSummaryLoading(
   }
 
   async function start() {
-    try {
-      session = await openSummarySession();
-    } catch (error) {
-      fail(error);
-      return;
-    }
-    if (disposed) return;
+    session = readSummarySession();
     if (!session) {
       leave("start");
       return;
@@ -178,7 +171,7 @@ export function createSummaryLoading(
       await cancelIntake(intakeId);
     } catch (error) {
       // 이미 없는 문진(403, 404)은 취소된 것과 같습니다.
-      if (!isSummaryGone(error)) {
+      if (!isSessionGone(error)) {
         update({ busy: false, cancelMessage: getErrorMessage(error) });
         if (resumePolling && session) void poll(session, retryUnsent);
         return;

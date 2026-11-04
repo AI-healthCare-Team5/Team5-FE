@@ -3,12 +3,12 @@ import {
   getErrorMessage,
   getFieldErrors,
   INVALID_RESPONSE,
+  isSessionGone,
 } from "@/api/errors";
 import {
   confirmSummary,
   getSummary,
   isSummaryConflict,
-  isSummaryGone,
   updateSummary,
   type SummaryContent,
 } from "@/api/summaries";
@@ -18,9 +18,9 @@ import {
   canSaveEdits,
   type SummaryEdits,
 } from "@/pages/summary/editSummary";
-import { openSummarySession } from "@/stores/openSummarySession";
 import {
   clearSummarySession,
+  readSummarySession,
   type SummarySession,
 } from "@/stores/summarySession";
 
@@ -107,7 +107,7 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
 
   // 요약지가 없어졌거나(403, 404) 아직 만드는 중이면(SUMMARY_409) 이 화면에서 할 수 있는 일이 없어 다른 화면으로 보냅니다.
   function routeAway(error: unknown): boolean {
-    if (isSummaryGone(error)) {
+    if (isSessionGone(error)) {
       leave("start");
       return true;
     }
@@ -122,8 +122,7 @@ export function createSummaryScreen(hooks: SummaryScreenHooks): SummaryScreen {
     if (view.phase !== "loading") update({ phase: "loading", message: null });
     try {
       if (!session) {
-        session = await openSummarySession();
-        if (disposed) return;
+        session = readSummarySession();
         if (!session) {
           leave("start");
           return;

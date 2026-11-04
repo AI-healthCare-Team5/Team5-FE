@@ -4,7 +4,7 @@ import { isMockApi } from "@/api/client";
 import { DesignIcon } from "@/components/DesignIcon";
 import { ScreenIcon } from "@/components/ScreenElements";
 import { SummaryDocument } from "@/components/summary/SummaryDocument";
-import { WarningNotice } from "@/components/summary/WarningNotice";
+import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
 import { SummaryEditForm } from "@/pages/summary/components/SummaryEditForm";
 import { SummaryStorage } from "@/pages/summary/components/SummaryStorage";

@@ -1,7 +1,7 @@
 import { ScreenIcon } from "@/components/ScreenElements";
 import { Notice } from "@/components/ui";
 
-// 요약지 화면(S06a, S06)이 요청 실패나 생성 실패를 알릴 때 쓰는 안내입니다.
+// 요청 실패나 처리하지 못한 일을 알리는 안내입니다. 문진·병원·요약지 화면이 함께 씁니다.
 // 나타나면 스크린리더가 바로 읽도록 role="alert"를 둡니다.
 export function WarningNotice({ children }: { children: string }) {
   return (

@@ -30,18 +30,38 @@ const etcStart: IntakeStartRequest = {
   onset: "TODAY",
 };
 
-// 기본 정보 질문에 버튼으로 답합니다. 선택지는 첫 번째 것을 고릅니다.
+// 질문 종류에 맞게 답합니다. 선택지는 첫 번째 것을 버튼으로 고르고, 예/아니요는 버튼으로,
+// FREE_TEXT(복용약·앓는 병·알레르기)는 글로 답합니다.
 const yesNoAnswers: Record<string, string> = {
   q_swelling: "YES",
   q_fall: "NO",
-  q_medications: "YES",
-  q_conditions: "NO",
-  q_allergies: "UNKNOWN",
 };
+const freeTextAnswers: Record<string, string> = {
+  q_medications: "OO약",
+  q_conditions: "없어요",
+  q_allergies: "잘 모르겠어요",
+};
+
+function answerFor(
+  question: NonNullable<IntakeResponse["question"]>,
+  freeTexts: Record<string, string> = freeTextAnswers,
+) {
+  if (question.answerType === "FREE_TEXT") {
+    return {
+      inputMode: "TEXT" as const,
+      answer: freeTexts[question.questionId],
+    };
+  }
+  return {
+    inputMode: "BUTTON" as const,
+    answer: question.options?.[0].code ?? yesNoAnswers[question.questionId],
+  };
+}
 
 async function answerAll(
   api: MockApi,
   first: IntakeResponse,
+  freeTexts: Record<string, string> = freeTextAnswers,
 ): Promise<{ last: IntakeResponse; progress: number[] }> {
   let current = first;
   const progress: number[] = [];
@@ -50,8 +70,7 @@ async function answerAll(
     progress.push(current.progress.current);
     const result = await api.answerIntake(current.intakeId, {
       questionId: question.questionId,
-      inputMode: "BUTTON",
-      answer: question.options?.[0].code ?? yesNoAnswers[question.questionId],
+      ...answerFor(question, freeTexts),
     });
     if (result.kind !== "advanced")
       throw new Error(`예상 밖 결과: ${result.kind}`);
@@ -84,7 +103,7 @@ describe("가짜 문진 흐름", () => {
     expect(started.stage).toBe("BASIC_INFO");
     expect(started.progress).toEqual({ current: 1, total: 5 });
     expect(started.question?.questionId).toBeTruthy();
-    expect(started.collected).toEqual(["다리·무릎", "2~3일 전부터"]);
+    expect(started.collected).toEqual(["다리 · 무릎", "2~3일 전부터"]);
 
     const { last, progress } = await answerAll(api, started);
 
@@ -113,6 +132,110 @@ describe("가짜 문진 흐름", () => {
       { code: "SIXTIES", label: "60대" },
       { code: "SEVENTIES", label: "70대" },
       { code: "OVER_80", label: "80대 이상" },
+    ]);
+  });
+
+  it("복용약·앓는 병·알레르기는 실제 서버처럼 FREE_TEXT 질문이다", async () => {
+    const api = await loadMockApi();
+    let current = await api.startIntake(buttonStart);
+
+    const seen: [string, string, boolean][] = [];
+    for (let guard = 0; guard < 6 && current.question; guard += 1) {
+      const { questionId, answerType, options } = current.question;
+      seen.push([questionId, answerType, options === null]);
+      const result = await api.answerIntake(current.intakeId, {
+        questionId,
+        ...answerFor(current.question),
+      });
+      if (result.kind !== "advanced") throw new Error(result.kind);
+      current = result.intake;
+    }
+
+    expect(current.status).toBe("COMPLETED");
+    expect(seen).toEqual([
+      ["q_age_group", "SINGLE_CHOICE", false],
+      ["q_gender", "SINGLE_CHOICE", false],
+      ["q_medications", "FREE_TEXT", true],
+      ["q_conditions", "FREE_TEXT", true],
+      ["q_allergies", "FREE_TEXT", true],
+    ]);
+  });
+
+  it("FREE_TEXT는 글로만 답할 수 있다: 버튼 답과 빈 답은 400이고 상태는 그대로다", async () => {
+    const api = await loadMockApi();
+    const started = await api.startIntake(buttonStart);
+    let current = started;
+    for (const code of ["SEVENTIES", "FEMALE"]) {
+      const result = await api.answerIntake(current.intakeId, {
+        questionId: current.question!.questionId,
+        inputMode: "BUTTON",
+        answer: code,
+      });
+      if (result.kind !== "advanced") throw new Error(result.kind);
+      current = result.intake;
+    }
+    expect(current.question).toMatchObject({
+      questionId: "q_medications",
+      answerType: "FREE_TEXT",
+    });
+
+    await expect(
+      api.answerIntake(current.intakeId, {
+        questionId: "q_medications",
+        inputMode: "BUTTON",
+        answer: "YES",
+      }),
+    ).rejects.toMatchObject({ code: "INTAKE_400", status: 400 });
+    await expect(
+      api.answerIntake(current.intakeId, {
+        questionId: "q_medications",
+        inputMode: "TEXT",
+        answer: "   ",
+      }),
+    ).rejects.toMatchObject({
+      code: "INTAKE_400",
+      result: { errors: [{ field: "request" }] },
+    });
+
+    await expect(api.getIntake(current.intakeId)).resolves.toEqual(current);
+  });
+
+  it("모은 정보에는 선택한 답이 서버와 같은 문구로 쌓이고, FREE_TEXT 답은 넣지 않는다", async () => {
+    const api = await loadMockApi();
+    let current = await api.startIntake({ ...buttonStart, bodyPart: "BACK" });
+    expect(current.collected).toEqual(["허리 · 등", "2~3일 전부터"]);
+
+    const collectedAfter: string[][] = [];
+    for (let guard = 0; guard < 5 && current.question; guard += 1) {
+      const result = await api.answerIntake(current.intakeId, {
+        questionId: current.question.questionId,
+        ...answerFor(current.question),
+      });
+      if (result.kind !== "advanced") throw new Error(result.kind);
+      current = result.intake;
+      collectedAfter.push(current.collected);
+    }
+
+    expect(collectedAfter).toEqual([
+      ["허리 · 등", "2~3일 전부터", "50대 이하"],
+      ["허리 · 등", "2~3일 전부터", "50대 이하", "남성"],
+      ["허리 · 등", "2~3일 전부터", "50대 이하", "남성"],
+      ["허리 · 등", "2~3일 전부터", "50대 이하", "남성"],
+      ["허리 · 등", "2~3일 전부터", "50대 이하", "남성"],
+    ]);
+  });
+
+  it("글로 시작하면 증상 질문의 답은 이름을 붙여 모은 정보에 쌓인다", async () => {
+    const api = await loadMockApi();
+    const started = await api.startIntake({ inputMode: "TEXT", text: "OO" });
+    const result = await api.answerIntake(started.intakeId, {
+      questionId: started.question!.questionId,
+      inputMode: "BUTTON",
+      answer: "YES",
+    });
+
+    expect(result.kind === "advanced" && result.intake.collected).toEqual([
+      "붓기: 네",
     ]);
   });
 
@@ -304,6 +427,27 @@ describe("가짜 요약지", () => {
     expect(summary.department.departmentName).toBe("정형외과");
     expect(summary.isConfirmed).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("글로 답한 건강 정보는 첫 낱말을 이름, 나머지를 설명으로 나누고 없음·모름은 []·null이다", async () => {
+    const api = await loadMockApi();
+    const started = await api.startIntake(buttonStart);
+    const { last } = await answerAll(api, started, {
+      q_medications: "혈압약 하루 두 번",
+      q_conditions: "고혈압",
+      q_allergies: "없어요",
+    });
+    for (let count = 0; count < 4; count += 1) {
+      await api.getSummary(last.summaryId!);
+    }
+
+    const summary = (await api.getSummary(last.summaryId!)).summary!;
+
+    expect(summary.medications).toEqual([
+      { name: "혈압약", detail: "하루 두 번" },
+    ]);
+    expect(summary.conditions).toEqual([{ name: "고혈압", detail: null }]);
+    expect(summary.allergies).toEqual([]);
   });
 
   it("pollSummary가 1초 간격으로 DONE까지 이어진다", async () => {
