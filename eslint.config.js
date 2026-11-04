@@ -54,20 +54,6 @@ export default defineConfig(
     extends: [reactRefresh.configs.vite(), jsxA11y.configs.recommended],
   },
   {
-    // 기존 px 글자 크기는 #82에서 정리합니다. 이 파일들에서도 hex 색상 검사는 유지합니다.
-    files: [
-      "src/components/layout/AppShell.tsx",
-      "src/components/ScreenElements.tsx",
-      "src/pages/start/StartPage.tsx",
-    ],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        ...designTokenRules.filter((rule) => rule.message === hexColorMessage),
-      ],
-    },
-  },
-  {
     files: ["worker/**/*.ts"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
