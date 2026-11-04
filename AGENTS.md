@@ -28,6 +28,7 @@
 - 저장소에서 기능 작업을 할 때는 먼저 담당자와 라벨을 지정한 GitHub 이슈를 준비하고, 이슈 단위 브랜치에서 작업합니다.
 - 커밋 메시지는 이모지 없이 "작업 유형: 요약" 형식으로 작성합니다. 예: Feat: 진료 화면 추가, Fix: 날짜 표시 수정, Docs: 개발 안내 보완.
 - PR에는 변경 요약, 확인한 항목, UI 변경 시 화면 캡처를 포함합니다. 적절한 라벨과 담당자, 리뷰어를 지정합니다.
+- PR을 열기 전에 CONTRIBUTING.md의 "PR 전 자기 검토 체크리스트"를 확인합니다.
 - 배포는 Cloudflare Workers Builds Git 연동으로 관리합니다. 빌드 명령은 `npm run build`, 배포 명령은 `npx wrangler deploy`이고, 프로덕션이 아닌 브랜치는 기본값 `npx wrangler versions upload`로 미리보기 버전을 올립니다. GitHub Actions는 format, lint, typecheck, test, build를 확인합니다. 브랜치와 PR의 미리보기 URL도 리뷰에 활용합니다.
 
 ## 참고 문서
