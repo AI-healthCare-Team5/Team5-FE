@@ -16,7 +16,8 @@ const fileNames: Record<string, string> = {
   "audio/mp4": "audio.m4a",
 };
 
-// 녹음 파일을 글자로 바꿉니다. 파일은 multipart의 audio 부분으로만 올리고, 서버는 저장하지 않습니다.
+// 녹음 파일을 글자로 바꿉니다. 프론트는 파일을 저장하지 않고 multipart의 audio 부분으로 올리기만 합니다.
+// 서버가 파일을 저장하는지, 외부 음성 인식 서비스로 보내는지는 프론트에서 알 수 없고 백엔드 확인 전입니다.
 // 실패하면 STT_400(파일 없음)·413(10MB·60초 초과)·415(지원하지 않는 형식)·422(알아들을 수 없음)·429(호출 제한)·503(인식 서비스 실패)을
 // ApiError로 던집니다. 화면 안내는 src/lib/voice/sttFailure.ts가 정합니다.
 export async function recognizeSpeech(

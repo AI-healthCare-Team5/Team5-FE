@@ -26,7 +26,8 @@ const exitPaths: Record<VoiceInterviewExit, string> = {
   start: "/",
 };
 
-// 마이크를 쓸 수 없는 경우입니다. 글로 입력하는 길을 안내하는 S02a로 보냅니다.
+// 마이크를 쓸 수 없는 경우입니다. 문진을 시작하기 전이면 글로 입력하는 길을 안내하는 S02a로 보냅니다.
+// 문진을 이미 시작했다면 S02a의 "글로 입력하기"가 새 문진을 만들어 앞선 답을 잃게 하므로 이 화면에 머뭅니다.
 const micUnavailableKinds = ["unsupported", "permission-denied", "no-device"];
 
 // S03은 서버 문진을 말로 이어갑니다. 말한 내용은 STT로 글자로 바꿔 inputMode=VOICE로 보내고,
@@ -64,13 +65,23 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
   const micUnavailable =
     micError !== null && micUnavailableKinds.includes(micError.kind);
 
-  const { intake, busy, transcribing, failure, message } = view;
+  const { intake, busy, transcribing, failure, message, suggestTextInput } =
+    view;
   const question = intake?.question ?? null;
   const complete = intake?.status === "COMPLETED";
   const choices = question ? answerChoices(question) : [];
   const reask = (intake?.reask ?? false) || failure?.kind === "not-understood";
 
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // 마이크 오류나 인식 실패 안내가 생기면, 하단 119 바 아래나 화면 밖에 있지 않도록 보이는 곳까지만 스크롤합니다.
+  // 화면 낭독기는 role="alert"로 따로 읽습니다.
+  const noticesRef = useRef<HTMLDivElement>(null);
+  const hasNotice = Boolean(
+    micError || (failure && failure.kind !== "not-understood") || message,
+  );
+  useEffect(() => {
+    if (hasNotice) noticesRef.current?.scrollIntoView({ block: "nearest" });
+  }, [hasNotice, micError, failure, message]);
   // 질문이 바뀌어도 주소는 그대로라, 바뀐 질문 제목으로 직접 포커스를 옮깁니다.
   // 처음 그릴 때는 AppShell이 h1에 포커스를 줍니다.
   const focusKey = complete ? "complete" : (question?.questionId ?? "start");
@@ -87,9 +98,36 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
     }
   }, [focusKey]);
 
-  if (micUnavailable) {
+  // 문진을 시작하기 전(intake === null)에만 S02a로 보냅니다.
+  if (micUnavailable && intake === null) {
     return <Navigate to="/mic-guide/unavailable" replace />;
   }
+
+  // 마이크는 질문 바로 아래에 둡니다. 말로 답하는 화면이라, 선택지가 많거나 글자를 키워도
+  // 스크롤하지 않고 찾을 수 있어야 하고 하단 119 바에 가리지 않아야 합니다.
+  // 마이크 오류와 인식 실패 안내는 마이크 바로 옆에서 읽도록 함께 둡니다.
+  const notices = hasNotice ? (
+    <div ref={noticesRef} className="flex scroll-mb-[96px] flex-col gap-3">
+      {micError && <WarningNotice>{micError.message}</WarningNotice>}
+      {failure && failure.kind !== "not-understood" && (
+        <WarningNotice>{failure.message}</WarningNotice>
+      )}
+      {message && <WarningNotice>{message}</WarningNotice>}
+    </div>
+  ) : null;
+  const voiceArea = (
+    <>
+      <VoiceControl
+        status={recorder.status}
+        busy={busy}
+        transcribing={transcribing}
+        onStart={() => void recorder.start()}
+        onStop={recorder.stop}
+        onCancel={recorder.cancel}
+      />
+      {notices}
+    </>
+  );
 
   return (
     <>
@@ -140,6 +178,7 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
               알려주신 내용으로 알맞은 병원을 찾아볼게요.
             </p>
             <ActionLink to="/location">병원 안내 보기</ActionLink>
+            {notices}
           </>
         ) : (
           <>
@@ -150,28 +189,19 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
                 reask={reask}
                 last={intake?.progress.current === intake?.progress.total}
                 busy={busy}
+                beforeChoices={voiceArea}
                 onSubmit={(choice) =>
                   void interviewRef.current?.chooseAnswer(choice)
                 }
               />
             ) : (
-              <ReaskNotice show={reask} />
+              <>
+                <ReaskNotice show={reask} />
+                {voiceArea}
+              </>
             )}
-            <VoiceControl
-              status={recorder.status}
-              busy={busy}
-              transcribing={transcribing}
-              onStart={() => void recorder.start()}
-              onStop={recorder.stop}
-              onCancel={recorder.cancel}
-            />
           </>
         )}
-        {micError && <WarningNotice>{micError.message}</WarningNotice>}
-        {failure && failure.kind !== "not-understood" && (
-          <WarningNotice>{failure.message}</WarningNotice>
-        )}
-        {message && <WarningNotice>{message}</WarningNotice>}
       </div>
       <div className="flex flex-col gap-3">
         {/* 끝난 문진은 서버에서 이전 질문으로 돌아갈 수 없습니다(INTAKE_409). */}
@@ -188,7 +218,7 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
         {!complete && (
           <ActionLink
             to={intake ? "/text-input/questions" : "/text-input"}
-            variant={failure?.suggestTextInput ? "primary" : "outline"}
+            variant={suggestTextInput || micError ? "primary" : "outline"}
           >
             글로 입력하기
           </ActionLink>

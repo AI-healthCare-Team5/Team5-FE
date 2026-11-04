@@ -322,6 +322,78 @@ describe("S03 음성 인식(STT) 오류", () => {
     expect(startMock).not.toHaveBeenCalled();
     expect(last().failure?.kind).toBe("not-understood");
   });
+
+  it("서버 오류(STT_ 코드가 아닌 실패)는 첫 번째에는 다시 시도하게만 하고, 연속 두 번째부터 글로 입력하기를 강조한다", async () => {
+    sttMock.mockRejectedValue(new ApiError("COMMON_501", "", 501));
+    const { interview, last } = setup();
+
+    await interview.submitRecording(recording);
+    expect(last().failure?.kind).toBe("retry");
+    expect(last().suggestTextInput).toBe(false);
+
+    await interview.submitRecording(recording);
+    expect(last().suggestTextInput).toBe(true);
+
+    // 세 번째 녹음을 시작해 안내가 지워져도 강조는 유지합니다.
+    const third = deferred<{ text: string; durationSec: number }>();
+    sttMock.mockReturnValue(third.promise);
+    const pending = interview.submitRecording(recording);
+    expect(last()).toMatchObject({ failure: null, suggestTextInput: true });
+    third.resolve({ text: "무릎이 아파요", durationSec: 3 });
+    startMock.mockResolvedValue(intake());
+    await pending;
+  });
+
+  it("글자로 바꾸기에 성공하면 연속 실패 횟수를 0으로 되돌린다", async () => {
+    sttMock.mockRejectedValueOnce(new ApiError("COMMON_501", "", 501));
+    sttMock.mockRejectedValueOnce(new ApiError("COMMON_501", "", 501));
+    sttMock.mockResolvedValueOnce({ text: "무릎이 아파요", durationSec: 3 });
+    startMock.mockResolvedValue(intake());
+    const { interview, last } = setup();
+    await interview.submitRecording(recording);
+    await interview.submitRecording(recording);
+    expect(last().suggestTextInput).toBe(true);
+
+    await interview.submitRecording(recording);
+    expect(last().suggestTextInput).toBe(false);
+
+    sttMock.mockRejectedValueOnce(new ApiError("COMMON_501", "", 501));
+    await interview.submitRecording(recording);
+    expect(last().suggestTextInput).toBe(false);
+  });
+
+  it("버튼으로 답하면 연속 실패 횟수를 0으로 되돌린다", async () => {
+    beginIntakeSession(intake());
+    sttMock.mockRejectedValue(new ApiError("COMMON_501", "", 501));
+    answerMock.mockResolvedValue(advanced(secondQuestion));
+    const { interview, last } = setup();
+    await interview.submitRecording(recording);
+    await interview.submitRecording(recording);
+    expect(last().suggestTextInput).toBe(true);
+
+    await interview.chooseAnswer({ code: "YES", label: "네" });
+    await interview.submitRecording(recording);
+
+    expect(last().suggestTextInput).toBe(false);
+  });
+
+  it("다시 말하면 되는 첫 실패(STT_422)는 글로 입력하기를 강조하지 않는다", async () => {
+    sttMock.mockRejectedValue(sttError(422));
+    const { interview, last } = setup();
+
+    await interview.submitRecording(recording);
+
+    expect(last().suggestTextInput).toBe(false);
+  });
+
+  it("글로 입력하라는 실패(STT_503)는 첫 번째부터 강조한다", async () => {
+    sttMock.mockRejectedValue(sttError(503));
+    const { interview, last } = setup();
+
+    await interview.submitRecording(recording);
+
+    expect(last().suggestTextInput).toBe(true);
+  });
 });
 
 describe("S03에서 글로 바꾸기", () => {

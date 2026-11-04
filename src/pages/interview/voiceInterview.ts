@@ -30,7 +30,14 @@ export interface VoiceInterviewView {
   failure: SttFailure | null;
   // 문진 요청이 실패했을 때의 안내입니다.
   message: string | null;
+  // true면 "글로 입력하기"를 눈에 띄게 안내합니다. 음성으로 계속하기 어렵다는 실패이거나,
+  // 글자로 바꾸기가 연속으로 실패해 같은 안내만 반복해서 보게 될 때 켭니다.
+  suggestTextInput: boolean;
 }
+
+// 글자로 바꾸기가 이만큼 연속으로 실패하면 글로 입력하기를 강조합니다.
+// 서버 오류(STT_ 코드가 아닌 실패)는 다시 시도하라는 안내만 나오므로, 반복되면 다른 길을 보여 줘야 합니다.
+export const TEXT_INPUT_SUGGEST_AFTER_FAILURES = 2;
 
 // emergency: 위험 신호로 판정돼 응급 안내(E01)로 갑니다. start: 문진이 없어져 처음(/)으로 갑니다.
 export type VoiceInterviewExit = "emergency" | "start";
@@ -59,6 +66,7 @@ export function initialVoiceInterviewView(
     transcribing: false,
     failure: null,
     message: null,
+    suggestTextInput: false,
   };
 }
 
@@ -73,12 +81,17 @@ export function createVoiceInterview(
   let questions: IntakeQuestions | null = null;
   // 화면을 떠나면 글자로 바꾸는 요청과 문진 시작 요청을 취소합니다.
   const requests = new AbortController();
+  // 글자로 바꾸기가 연속으로 실패한 횟수입니다. 글자로 바꾸는 데 성공하거나 버튼으로 답하면 0으로 돌아갑니다.
+  let failureStreak = 0;
 
   function update(patch: Partial<VoiceInterviewView>) {
     if (disposed) return;
     view = { ...view, ...patch };
     view.transcribing = phase === "transcribing";
     view.busy = phase !== "idle" || questionsBusy;
+    view.suggestTextInput =
+      failureStreak >= TEXT_INPUT_SUGGEST_AFTER_FAILURES ||
+      (view.failure?.suggestTextInput ?? false);
     hooks.onView(view);
   }
 
@@ -140,9 +153,11 @@ export function createVoiceInterview(
     if (disposed || result.kind === "aborted") return;
     if (result.kind === "failed") {
       phase = "idle";
+      failureStreak += 1;
       update({ failure: result.failure });
       return;
     }
+    failureStreak = 0;
     if (questions) {
       // 이어서 묻는 중이면 같은 순간에 답변 요청이 busy를 이어받습니다.
       phase = "idle";
@@ -155,6 +170,7 @@ export function createVoiceInterview(
 
   async function chooseAnswer(choice: IntakeOption) {
     if (disposed || view.busy || !questions) return;
+    failureStreak = 0;
     update({ failure: null });
     await questions.submit({ inputMode: "BUTTON", answer: choice.code });
   }

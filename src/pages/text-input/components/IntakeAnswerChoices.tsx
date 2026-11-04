@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ReaskNotice } from "@/components/ReaskNotice";
 import { Button, Chip } from "@/components/ui";
 import {
@@ -15,6 +15,7 @@ export function IntakeAnswerChoices({
   last,
   busy = false,
   initialCode = null,
+  beforeChoices,
   onSubmit,
 }: {
   question: IntakeQuestion;
@@ -26,6 +27,8 @@ export function IntakeAnswerChoices({
   busy?: boolean;
   // 이전 질문으로 돌아왔을 때 직전에 고른 답을 다시 보여 줍니다.
   initialCode?: string | null;
+  // 다시 묻는다는 안내 아래, 선택지 위에 놓을 내용입니다. S03이 마이크를 질문 가까이에 두려고 씁니다.
+  beforeChoices?: ReactNode;
   onSubmit: (choice: IntakeOption) => void;
 }) {
   const [selectedCode, setSelectedCode] = useState(initialCode);
@@ -34,6 +37,7 @@ export function IntakeAnswerChoices({
   return (
     <>
       <ReaskNotice show={reask} />
+      {beforeChoices}
       {/* Figma S03처럼 2열로 놓고, 선택지가 홀수면(네·아니요·잘 모르겠어요) 마지막 하나가 한 줄을 채웁니다. */}
       <ul className="grid grid-cols-2 gap-[10px]">
         {choices.map((choice, index) => (
