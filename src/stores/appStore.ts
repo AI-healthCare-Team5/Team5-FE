@@ -1,21 +1,26 @@
 import { useSyncExternalStore } from "react";
-import { isMockApi } from "@/api/client";
-import type { SummaryContent } from "@/api/summaries";
-import { createSampleRecords } from "@/stores/fixtures";
+import type { Guardian } from "@/api/guardians";
+import type { MemberInfo } from "@/api/members";
 import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
   readLoginIntent,
   type LoginIntent,
   type SaveTarget,
 } from "@/stores/loginIntent";
-import type { Interview, SavedRecord } from "@/stores/model";
+import type { Interview } from "@/stores/model";
 
 interface AppState {
   interview: Interview;
   loggedIn: boolean;
   nickname: string;
+  // 기록 저장 동의(RECORD)를 했는지입니다. 서버가 알려 준 값만 담습니다.
   recordConsent: boolean;
-  records: SavedRecord[];
+  // 서버가 알려 준 보호자입니다. 없으면 null이고, 전화번호는 가운데를 가린 값입니다.
+  guardian: Guardian | null;
+  // 보호자 연락처 저장 동의(GUARDIAN)를 했는지입니다. 보호자를 지우면 서버가 함께 철회합니다.
+  guardianConsent: boolean;
+  // 내 정보를 불러왔을 때의 보관한 기록 수입니다.
+  recordCount: number;
   returnTo: string;
   // "로그인하고 보관하기"로 로그인한 경우 보관할 요약지입니다.
   saveTarget: SaveTarget | null;
@@ -29,13 +34,25 @@ const loginIntent = readLoginIntent();
 const initialState: AppState = {
   interview: {},
   loggedIn: false,
-  nickname: "봄날",
+  nickname: "",
   recordConsent: false,
-  records: [],
+  guardian: null,
+  guardianConsent: false,
+  recordCount: 0,
   returnTo: loginIntent.returnTo,
   saveTarget: loginIntent.saveTarget,
   summarySaved: false,
 };
+
+// 계정에 묶인 값을 비로그인 상태로 되돌립니다.
+const signedOutAccount = {
+  loggedIn: false,
+  nickname: "",
+  recordConsent: false,
+  guardian: null,
+  guardianConsent: false,
+  recordCount: 0,
+} satisfies Partial<AppState>;
 
 let state: AppState = initialState;
 const listeners = new Set<() => void>();
@@ -77,7 +94,7 @@ export const appActions = {
     update({ returnTo, saveTarget });
   },
   // 카카오 로그인 응답으로 로그인 상태를 바꿉니다.
-  // 예시 기록은 가짜 응답(VITE_API_MOCK)에서만 넣고, 실제 로그인에서는 기록 API 연결 전까지 비워 둡니다.
+  // 기록과 보호자는 내 정보(applyMember)나 기록 API에서 불러오고, 여기서는 넣지 않습니다.
   completeLogin(
     result: { nickname: string | null; needsRecordConsent: boolean },
     intent: LoginIntent,
@@ -86,67 +103,63 @@ export const appActions = {
       loggedIn: true,
       nickname: result.nickname ?? "",
       recordConsent: !result.needsRecordConsent,
-      records: state.loggedIn
-        ? state.records
-        : isMockApi
-          ? createSampleRecords()
-          : [],
       returnTo: intent.returnTo,
       saveTarget: intent.saveTarget,
     });
   },
+  // 내 정보(GET /members/me) 응답으로 로그인 상태와 동의, 보호자를 바꿉니다.
+  // 새로고침한 뒤 로그인 상태가 남아 있는지 확인할 때도 씁니다.
+  applyMember(info: MemberInfo) {
+    update({
+      loggedIn: true,
+      nickname: info.nickname ?? "",
+      recordConsent: info.consents.record.agreed,
+      guardian: info.guardian,
+      guardianConsent: info.consents.guardian.agreed,
+      recordCount: info.recordCount,
+    });
+  },
+  // 서버가 기록 저장 동의를 받은 뒤에 부릅니다.
   agreeToRecords() {
     if (!state.loggedIn) {
       return;
     }
     update({ recordConsent: true });
   },
-  // 보관할 요약지는 S06이 갖고 있어서 인자로 받습니다.
-  // 동의 화면(C02)처럼 요약지를 모르는 곳이 인자 없이 부르면 보관하지 않고,
-  // 동의 뒤 S06으로 돌아왔을 때 S06이 saveTarget을 보고 보관합니다.
-  // 같은 요약지를 두 번 보관하지 않습니다(StrictMode의 effect 두 번 실행 포함).
-  // 기록 저장 API(#29)가 연결되기 전까지 실제 경로에서는 보관하지 않습니다.
-  // 메모리에만 남는 기록을 저장 성공으로 보여 주지 않으려는 것이고, 로그인 복귀 후 자동 보관도 여기서 막힙니다.
-  saveSummary(summary?: SummaryContent) {
-    if (
-      !isMockApi ||
-      !summary ||
-      !state.loggedIn ||
-      !state.recordConsent ||
-      state.summarySaved
-    ) {
+  // 보관을 요청했는데 서버가 동의가 없다(CONSENT_403)고 한 경우입니다.
+  revokeRecordConsent() {
+    update({ recordConsent: false });
+  },
+  // 서버가 요약지를 내 기록에 보관했다고 알린 뒤에 부릅니다.
+  markSummarySaved() {
+    update({ summarySaved: true });
+  },
+  // 보호자를 등록·변경하거나 지운 결과입니다. 등록·변경은 GUARDIAN 동의도 함께 받고, 삭제는 함께 철회합니다.
+  setGuardian(guardian: Guardian | null) {
+    update({ guardian, guardianConsent: guardian !== null });
+  },
+  // 로그인이 풀렸다(AUTH_401)고 서버가 알렸을 때입니다. 비로그인 문진 흐름과 보관하려던 요약지 기억은 그대로 둡니다.
+  markLoggedOut() {
+    if (!state.loggedIn) {
       return;
     }
-    const record: SavedRecord = {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      summary,
-    };
-    update({ records: [record, ...state.records], summarySaved: true });
+    update(signedOutAccount);
   },
-  deleteRecord(id: string) {
-    const records = state.records.filter((record) => record.id !== id);
-    update({
-      records,
-      recordConsent: records.length === 0 ? false : state.recordConsent,
-    });
-  },
+  // 서버가 로그아웃한 뒤에 부릅니다. 서버가 이 브라우저의 문진·요약지도 지우므로 기억한 ID도 함께 지웁니다.
   logout() {
+    resetIntakeFlow();
     update({
-      loggedIn: false,
-      nickname: "봄날",
-      recordConsent: false,
-      records: [],
+      ...signedOutAccount,
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
     });
   },
+  // 서버가 탈퇴를 처리한 뒤에 부릅니다. 쿠키와 기록, 동의가 모두 지워집니다.
   withdraw() {
+    resetIntakeFlow();
     update({
-      loggedIn: false,
-      recordConsent: false,
-      records: [],
+      ...signedOutAccount,
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,

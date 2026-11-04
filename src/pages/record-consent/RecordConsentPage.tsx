@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
-import { appActions, useAppStore } from "@/stores/appStore";
+import { WarningNotice } from "@/components/WarningNotice";
+import { useAppStore } from "@/stores/appStore";
+import { submitRecordConsent } from "@/stores/recordConsent";
 import { ScreenIcon } from "@/components/ScreenElements";
 
 const items = [
@@ -33,18 +35,31 @@ const items = [
 
 export function RecordConsentPage() {
   const [checked, setChecked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const { loggedIn, returnTo } = useAppStore();
   const navigate = useNavigate();
   if (!loggedIn) {
     return <Navigate to="/login" replace />;
   }
-  function agree() {
-    if (!checked) {
+  async function agree() {
+    if (!checked || submitting) {
       return;
     }
-    appActions.agreeToRecords();
-    // 동의 뒤 S06으로 돌아오면 S06이 보관하려던 요약지를 보관합니다(saveAfterReturn).
-    navigate(returnTo);
+    setSubmitting(true);
+    setMessage(null);
+    // 서버가 동의를 받은 뒤에만 다음으로 갑니다.
+    const outcome = await submitRecordConsent();
+    if (outcome.kind === "agreed") {
+      // 동의 뒤 S06으로 돌아오면 S06이 보관하려던 요약지를 보관합니다(saveAfterReturn).
+      navigate(returnTo);
+      return;
+    }
+    setSubmitting(false);
+    // 로그인이 풀렸으면 store가 비로그인으로 바뀌어 위의 Navigate가 로그인으로 보냅니다.
+    if (outcome.kind === "failed") {
+      setMessage(outcome.message);
+    }
   }
   return (
     <>
@@ -81,7 +96,12 @@ export function RecordConsentPage() {
         <span className="font-semibold">[필수] 진료 기록 저장에 동의해요</span>
       </label>
       <div className="flex flex-col gap-3">
-        <Button disabled={!checked} onClick={agree}>
+        {message && <WarningNotice>{message}</WarningNotice>}
+        <Button
+          disabled={!checked || submitting}
+          aria-busy={submitting}
+          onClick={() => void agree()}
+        >
           동의하고 시작하기
         </Button>
         {!checked && (

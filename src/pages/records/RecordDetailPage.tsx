@@ -1,22 +1,49 @@
-import { useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { InlineConfirm } from "@/components/InlineConfirm";
-import { StoredSummary } from "@/pages/records/components/StoredSummary";
-import { formatRecordDate } from "@/pages/records/formatRecordDate";
+import { SummaryDocument } from "@/components/summary/SummaryDocument";
+import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
-import { appActions, useAppStore } from "@/stores/appStore";
+import { formatRecordDate } from "@/pages/records/formatRecordDate";
+import {
+  createRecordDetailScreen,
+  initialRecordDetailView,
+  type RecordDetailScreen,
+} from "@/pages/records/recordDetailScreen";
+import { appActions } from "@/stores/appStore";
 
 export function RecordDetailPage() {
   const { id } = useParams();
-  const { loggedIn, records } = useAppStore();
+  const navigate = useNavigate();
+  const [view, setView] = useState(initialRecordDetailView);
   const [large, setLarge] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const navigate = useNavigate();
-  if (!loggedIn) {
-    return <Navigate to="/login" replace />;
-  }
-  const record = records.find((item) => item.id === id);
-  if (!record) {
+  const screenRef = useRef<RecordDetailScreen | null>(null);
+
+  // 로그인 확인과 불러오기, 지우기는 recordDetailScreen.ts가 맡습니다.
+  // 화면을 떠나면 진행 중인 요청을 취소합니다.
+  useEffect(() => {
+    const screen = createRecordDetailScreen(id, {
+      onView: setView,
+      onExit: (to) => {
+        if (to === "login") {
+          // 로그인하면 이 기록으로 돌아옵니다.
+          appActions.prepareLogin(`/records/${id}`);
+          navigate("/login", { replace: true });
+          return;
+        }
+        navigate("/records", { replace: true });
+      },
+    });
+    screenRef.current = screen;
+    void screen.load();
+    return () => {
+      screen.dispose();
+      screenRef.current = null;
+    };
+  }, [id, navigate]);
+
+  if (view.phase === "notFound") {
     return (
       <>
         <PageTitle>기록을 찾을 수 없어요</PageTitle>
@@ -25,16 +52,43 @@ export function RecordDetailPage() {
       </>
     );
   }
+  if (view.phase !== "ready" || !view.record) {
+    return (
+      <>
+        <PageTitle>저장된 요약지</PageTitle>
+        {view.phase === "error" ? (
+          <>
+            <WarningNotice>{view.message ?? ""}</WarningNotice>
+            <div className="flex flex-col gap-3">
+              <Button onClick={() => void screenRef.current?.load()}>
+                다시 시도
+              </Button>
+              <ActionLink to="/records" variant="quiet">
+                내 기록으로 돌아가기
+              </ActionLink>
+            </div>
+          </>
+        ) : (
+          <Card>
+            <p role="status">기록을 불러오는 중이에요.</p>
+          </Card>
+        )}
+      </>
+    );
+  }
+
+  const { record } = view;
+  const date = formatRecordDate(record.createdAt);
   return (
     <>
       <PageTitle
-        description={`${formatRecordDate(record.createdAt)}에 만든 요약지예요. 진료실에서 그대로 보여 줄 수 있어요.`}
+        description={`${date}에 만든 요약지예요. 진료실에서 그대로 보여 줄 수 있어요.`}
       >
         저장된 요약지
       </PageTitle>
-      <StoredSummary
+      <SummaryDocument
         summary={record.summary}
-        date={formatRecordDate(record.createdAt)}
+        caption={`내 기록 · ${date} 저장`}
         large={large}
       />
       <div className="flex flex-col gap-3">
@@ -51,14 +105,17 @@ export function RecordDetailPage() {
           이 기록 지우기
         </Button>
         {confirming && (
-          <InlineConfirm
-            message="이 기록을 지울까요? 지운 기록은 되돌릴 수 없어요."
-            onCancel={() => setConfirming(false)}
-            onConfirm={() => {
-              appActions.deleteRecord(record.id);
-              navigate("/records", { replace: true });
-            }}
-          />
+          <>
+            {view.deleteMessage && (
+              <WarningNotice>{view.deleteMessage}</WarningNotice>
+            )}
+            <InlineConfirm
+              message="이 기록을 지울까요? 지운 기록은 되돌릴 수 없어요."
+              busy={view.deleting}
+              onCancel={() => setConfirming(false)}
+              onConfirm={() => void screenRef.current?.remove()}
+            />
+          </>
         )}
       </div>
     </>
