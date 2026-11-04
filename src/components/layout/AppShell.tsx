@@ -84,7 +84,7 @@ export function AppShell() {
         <Outlet />
       </main>
       {!hiddenEmergencyBarPaths.has(pathname) && (
-        // eslint-disable-next-line no-restricted-syntax -- 119 바는 설계상 px로 고정하며, 7차 결정으로 16px 한 줄을 유지합니다.
+        // eslint-disable-next-line no-restricted-syntax -- 119 바는 설계상 px로 고정합니다.
         <footer className="sticky bottom-0 z-10 mt-auto flex min-h-[69px] items-center justify-between gap-[8px] border-t border-emergency-line bg-emergency-soft px-6 py-[10px] pb-[calc(10px+env(safe-area-inset-bottom))] text-[16px] text-emergency-ink">
           <span className="font-bold">위급하면 바로 119</span>
           <a
