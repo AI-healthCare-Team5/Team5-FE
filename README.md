@@ -6,13 +6,14 @@
 
 화면 ID와 경로, 담당 이슈는 [`AGENTS.md`](./AGENTS.md)의 "화면과 경로" 표를 기준으로 합니다.
 
-- 연결된 API: 카카오 로그인(인가 URL 발급, 인가 코드 교환)과 토큰 재발급, 문진 시작·답변·이전·취소(S04, S04a), 진료과·병원 검색(S05), 요약지 조회·재생성·수정·확정(S06a, S06). `src/api/client.ts`의 공통 요청 함수와 `src/api/` 아래 도메인 파일을 사용합니다.
+- 연결된 API: 카카오 로그인(인가 URL 발급, 인가 코드 교환)과 토큰 재발급, 문진 시작·답변·이전·취소(S04, S04a, S03), 음성 인식(`POST /api/stt`, S03), 진료과·병원 검색(S05), 요약지 조회·재생성·수정·확정(S06a, S06). `src/api/client.ts`의 공통 요청 함수와 `src/api/` 아래 도메인 파일을 사용합니다.
 - 카카오맵: `VITE_KAKAO_MAP_APP_KEY`가 있으면 SDK 지도를, 없거나 로드에 실패하면 예시 지도를 표시합니다.
 - 가짜 데이터: 문진·진료과·병원·요약지 가짜 응답과 예시 기록은 `VITE_API_MOCK=true`일 때만 쓰고, 빌드 결과물에는 들어가지 않습니다. 요약지 화면의 "내 기록에 보관" 카드는 mock에서만 보이고, 실제 경로에서는 기록 저장 API 연결 전까지 숨깁니다. 문진·로그인·기록 상태는 메모리에만 있어 새로고침하면 초기화됩니다. 글자 크기는 로컬 저장소, 문진·요약지 ID와 카카오 로그인 복귀 정보는 sessionStorage에 저장합니다.
-- 미연결: 음성 인식(S03은 버튼 문진이며 문진 API에 연결하지 않았습니다, #28), 응급 분기(#27), 지역 선택(S05b, `getRegions`, #33), 기록 보관·목록 API(#29).
+- 미연결: 응급 분기(#27), 지역 선택(S05b, `getRegions`, #33), 기록 보관·목록 API(#29).
+- 음성 문진(S03) 확인 전: 백엔드 `/api/stt`가 아직 명세 단계(`COMMON_501`)일 수 있어 실제 응답으로는 확인하지 못했습니다. 음성이 서버에서 저장되는지, 외부 AI 음성 인식 서비스로 전송되는지는 프론트에서 알 수 없고 백엔드 확인 전입니다. 프론트는 오디오를 브라우저 저장소에 쓰지 않고 STT 요청에만 올립니다. 마이크 녹음은 실기기에서 확인하지 못했습니다.
 - 미구현 경로: `/region`(#33), `/emergency-card`(#30), `/guardian`(#31). 현재는 404로 처리하며, 해당 화면으로 가는 버튼은 화면이 합쳐질 때까지 비활성이거나 숨겨져 있습니다. 위치 권한을 막은 사용자는 `/region`이 생기기 전까지 이어갈 경로가 없습니다. `/my-info`는 계정 영역만 있어 #32 본문을 추가해야 합니다.
 
-글 입력 경로(S04 → S04a → S05 → S06a → S06)는 끝까지 이어지지만, 음성 경로(S03)는 병원·요약지로 이어지지 않습니다. 문진은 답변이 없는 상태에서 시작합니다. 응급 안내에는 실제 사용할 수 있는 119 전화만 표시하고, 미구현 응급실·응급 카드 이동은 숨깁니다. 실패·빈 결과·응급 화면은 해당 URL로 직접 검토합니다. 백엔드 없이 화면을 보려면 `.env.local`에 `VITE_API_MOCK=true`를 둡니다.
+글 입력 경로(S04 → S04a → S05 → S06a → S06)와 음성 경로(S03 → S05 → S06a → S06)는 끝까지 이어집니다. 음성 경로는 말한 내용을 `POST /api/stt`로 글자로 바꿔 같은 문진 API에 `inputMode=VOICE`로 보내고, 선택지는 `BUTTON`으로 보냅니다. 문진이 끝나면 "병원 안내 보기"로 위치 확인을 거쳐 병원 안내로 갑니다. 문진을 시작하기 전에 마이크를 쓸 수 없으면 S02a로 가고, 문진 중이면 S03에 머물러 답을 지키며 "글로 입력하기"가 현재 질문부터 S04a로 이어집니다. 음성 인식이 연속으로 실패해도 같은 방식으로 "글로 입력하기"를 강조합니다. 가짜 응답(`VITE_API_MOCK=true`)에서도 녹음은 실제 마이크로 하고, 인식 결과만 `mockApi.ts`의 가짜 문장을 순서대로 돌려줍니다. 문진은 답변이 없는 상태에서 시작합니다. 응급 안내에는 실제 사용할 수 있는 119 전화만 표시하고, 미구현 응급실·응급 카드 이동은 숨깁니다. 실패·빈 결과·응급 화면은 해당 URL로 직접 검토합니다. 백엔드 없이 화면을 보려면 `.env.local`에 `VITE_API_MOCK=true`를 둡니다.
 
 ### 다른 담당자와 연결할 부분
 
@@ -20,7 +21,7 @@
 - `SummaryDocument`: 서버 요약지(`SummaryContent`, `src/api/summaries.ts`)를 받아 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
 - `SummaryStorage`: `loggedIn`, `saved`, `onLogin`, `onSave`를 전달합니다. 저장이 확인된 경우에만 `saved=true`를 전달합니다. 기록 저장 API(#29)가 연결되기 전에는 `VITE_API_MOCK`이 아니면 카드를 그리지 않고 `appActions.saveSummary`도 보관하지 않습니다. 로그인 전 `appActions.prepareLogin("/summary", saveTarget)`을 호출하면 동의 후 복귀합니다.
 - `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `onLogout`, `onWithdraw`를 전달합니다.
-- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S03·S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록은 `SummaryContent`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다. 서버 값은 `src/api/enums.ts`의 enum과 `src/api/values.ts`의 표시 함수를 사용합니다.
+- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록은 `SummaryContent`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다. 서버 값은 `src/api/enums.ts`의 enum과 `src/api/values.ts`의 표시 함수를 사용합니다.
 
 ### 공통 UI 사용 예시
 
