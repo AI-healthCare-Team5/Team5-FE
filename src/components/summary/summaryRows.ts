@@ -1,10 +1,10 @@
 import type { AgeGroup, Gender } from "@/api/enums";
+import type { HealthInfoItem, SummaryContent } from "@/api/summaries";
 import {
   formatCollectedList,
   formatCollectedValue,
   UNCHECKED_TEXT,
 } from "@/api/values";
-import type { HealthInfo, SummaryContent } from "@/components/summary/types";
 
 export interface SummaryRow {
   key: string;
@@ -27,7 +27,7 @@ const genderLabels: Record<Gender, string> = {
 function formatHealthInfo(value: SummaryContent["medications"]): string {
   return formatCollectedList(
     value &&
-      value.map(({ name, detail }: HealthInfo) =>
+      value.map(({ name, detail }: HealthInfoItem) =>
         detail ? `${name} (${detail})` : name,
       ),
   );
@@ -36,6 +36,7 @@ function formatHealthInfo(value: SummaryContent["medications"]): string {
 // 요약지 항목 순서: 나이대·성별 / 주된 증상 / 언제부터 / 증상별 항목(order 순) / 추가 내용 / 복용약 / 앓는 병 / 알레르기 / 진료과
 // 추가 내용은 선택 입력이라 "확인 못 했어요" 대신 값이 있을 때만 행을 만듭니다.
 export function buildSummaryRows(summary: SummaryContent): SummaryRow[] {
+  // 나이대·성별·진료과는 명세상 항상 있지만, 서버가 비워 보내도 화면이 깨지지 않게 "확인 못 했어요"로 보여 줍니다.
   const ageGroup = summary.ageGroup ? ageGroupLabels[summary.ageGroup] : null;
   const gender = summary.gender ? genderLabels[summary.gender] : null;
   const items = [...summary.items]

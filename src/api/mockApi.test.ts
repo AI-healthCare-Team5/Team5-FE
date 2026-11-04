@@ -102,6 +102,20 @@ describe("가짜 문진 흐름", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("나이대 선택지는 실제 서버와 같은 문구다", async () => {
+    const api = await loadMockApi();
+    const started = await api.startIntake(buttonStart);
+
+    const ageQuestion = started.question!;
+    expect(ageQuestion.questionId).toBe("q_age_group");
+    expect(ageQuestion.options).toEqual([
+      { code: "UNDER_50", label: "50대 이하" },
+      { code: "SIXTIES", label: "60대" },
+      { code: "SEVENTIES", label: "70대" },
+      { code: "OVER_80", label: "80대 이상" },
+    ]);
+  });
+
   it("글로 시작하면 증상 질문 뒤에 기본 정보 질문이 이어진다", async () => {
     const api = await loadMockApi();
 

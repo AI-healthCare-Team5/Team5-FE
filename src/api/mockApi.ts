@@ -283,10 +283,10 @@ const basicInfoQuestions: MockQuestion[] = [
     text: "연세가 어떻게 되세요?",
     answerType: "SINGLE_CHOICE",
     options: [
-      { code: "UNDER_50", label: "50세 미만" },
+      { code: "UNDER_50", label: "50대 이하" },
       { code: "SIXTIES", label: "60대" },
       { code: "SEVENTIES", label: "70대" },
-      { code: "OVER_80", label: "80세 이상" },
+      { code: "OVER_80", label: "80대 이상" },
     ],
     stage: "BASIC_INFO",
     label: "나이대",

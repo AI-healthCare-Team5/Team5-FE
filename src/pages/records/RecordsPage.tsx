@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
+import { formatCollectedValue } from "@/api/values";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
@@ -43,15 +44,14 @@ export function RecordsPage() {
                     {formatRecordDate(record.createdAt)}
                   </p>
                   <span className="rounded-full bg-brand-soft px-3 py-1 text-[0.889rem] font-bold text-brand-strong">
-                    {record.summary.department}
+                    {record.summary.department.departmentName}
                   </span>
                 </div>
                 <h2 className="mt-3 text-[1.222rem] font-bold">
-                  {record.summary.symptom}
+                  {formatCollectedValue(record.summary.mainSymptom)}
                 </h2>
                 <p className="mt-1 text-[0.889rem] text-muted">
-                  {record.summary.duration}
-                  {` · 붓기 ${record.summary.swelling}`}
+                  {formatCollectedValue(record.summary.onsetDetail)}
                 </p>
                 <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-6">
                   <ActionLink to={`/records/${record.id}`} variant="outline">

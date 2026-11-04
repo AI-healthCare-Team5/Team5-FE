@@ -1,16 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { isMockApi } from "@/api/client";
+import type { SummaryContent } from "@/api/summaries";
 import { createSampleRecords } from "@/stores/fixtures";
 import {
   readLoginIntent,
   type LoginIntent,
   type SaveTarget,
 } from "@/stores/loginIntent";
-import {
-  createSummary,
-  type Interview,
-  type SavedRecord,
-} from "@/stores/model";
+import type { Interview, SavedRecord } from "@/stores/model";
 
 interface AppState {
   interview: Interview;
@@ -93,14 +90,23 @@ export const appActions = {
     }
     update({ recordConsent: true });
   },
-  saveSummary() {
-    if (!state.loggedIn || !state.recordConsent) {
+  // 보관할 요약지는 S06이 갖고 있어서 인자로 받습니다.
+  // 동의 화면(C02)처럼 요약지를 모르는 곳이 인자 없이 부르면 보관하지 않고,
+  // 동의 뒤 S06으로 돌아왔을 때 S06이 saveTarget을 보고 보관합니다.
+  // 같은 요약지를 두 번 보관하지 않습니다(StrictMode의 effect 두 번 실행 포함).
+  saveSummary(summary?: SummaryContent) {
+    if (
+      !summary ||
+      !state.loggedIn ||
+      !state.recordConsent ||
+      state.summarySaved
+    ) {
       return;
     }
     const record: SavedRecord = {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      summary: createSummary(state.interview),
+      summary,
     };
     update({ records: [record, ...state.records], summarySaved: true });
   },

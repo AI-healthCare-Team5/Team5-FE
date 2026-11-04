@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, INVALID_RESPONSE } from "@/api/errors";
+import { ApiError, INVALID_RESPONSE, NETWORK_ERROR } from "@/api/errors";
 import {
   confirmSummary,
   getSummary,
+  isSummaryConflict,
+  isSummaryGone,
   pollSummary,
   retrySummary,
   updateSummary,
@@ -206,6 +208,43 @@ describe("요약지 요청", () => {
       await expect(promise).rejects.toMatchObject({ code: "SUMMARY_409" });
     },
   );
+});
+
+describe("요약지 오류 분류", () => {
+  it.each([
+    ["INTAKE_403", 403],
+    ["INTAKE_404", 404],
+    ["SUMMARY_403", 403],
+    ["SUMMARY_404", 404],
+  ])("%s는 더는 쓸 수 없는 문진·요약지다", (code, status) => {
+    expect(isSummaryGone(new ApiError(code, "", status))).toBe(true);
+  });
+
+  it.each([
+    ["SUMMARY_409", 409],
+    ["SUMMARY_400", 400],
+    ["SUMMARY_500", 500],
+    ["INTAKE_409", 409],
+    ["HOSPITAL_404", 404],
+    ["AUTH_401", 401],
+    [NETWORK_ERROR, 0],
+    [INVALID_RESPONSE, 200],
+  ])("%s는 쓸 수 없는 문진·요약지가 아니다", (code, status) => {
+    expect(isSummaryGone(new ApiError(code, "", status))).toBe(false);
+  });
+
+  it("ApiError가 아닌 값은 쓸 수 없는 문진·요약지가 아니다", () => {
+    expect(isSummaryGone(new Error("INTAKE_404"))).toBe(false);
+    expect(isSummaryGone(null)).toBe(false);
+    expect(isSummaryGone("SUMMARY_404")).toBe(false);
+  });
+
+  it("SUMMARY_409만 충돌로 본다", () => {
+    expect(isSummaryConflict(new ApiError("SUMMARY_409", "", 409))).toBe(true);
+    expect(isSummaryConflict(new ApiError("INTAKE_409", "", 409))).toBe(false);
+    expect(isSummaryConflict(new ApiError("SUMMARY_404", "", 404))).toBe(false);
+    expect(isSummaryConflict(new Error("SUMMARY_409"))).toBe(false);
+  });
 });
 
 describe("요약지 폴링", () => {
