@@ -1,13 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { SummaryContent } from "@/api/summaries";
-import { StoredSummary } from "@/pages/records/components/StoredSummary";
-import { createSampleRecords, sampleSummary } from "@/stores/fixtures";
+import { SummaryDocument } from "@/components/summary/SummaryDocument";
+import { sampleSummary } from "@/stores/fixtures";
 
 // 정적 마크업만 확인합니다(저장소에 DOM 테스트 도구가 없습니다).
-function render(summary: SummaryContent, large = false) {
+// S06과 H02(기록 상세)가 같은 컴포넌트를 쓰므로, 기록 상세가 받는 모양(null·[]가 섞인 요약지)으로 확인합니다.
+function render(
+  summary: SummaryContent,
+  large = false,
+  caption = "내 기록 · 2026.10.16 저장",
+) {
   return renderToStaticMarkup(
-    <StoredSummary summary={summary} date="2026.10.16" large={large} />,
+    <SummaryDocument summary={summary} caption={caption} large={large} />,
   );
 }
 
@@ -18,8 +23,8 @@ function rowsOf(html: string): [string, string][] {
   ].map((match) => [match[1], match[2]]);
 }
 
-describe("저장된 요약지", () => {
-  it("서버 요약지 모양을 S06과 같은 행으로 보여 준다", () => {
+describe("요약지 컴포넌트(S06·H02 공용)", () => {
+  it("서버 요약지 모양을 행으로 보여 준다", () => {
     expect(rowsOf(render(sampleSummary))).toEqual([
       ["나이대 · 성별", "70대 · 여성"],
       ["주된 증상", "무릎 통증"],
@@ -50,23 +55,6 @@ describe("저장된 요약지", () => {
     expect(rows["언제부터"]).toBe("확인 못 했어요");
   });
 
-  it("예시 기록 3건 모두 null과 []를 문구로 바꿔 보여 준다", () => {
-    for (const record of createSampleRecords()) {
-      const html = render(record.summary);
-
-      expect(html).not.toMatch(/undefined|null|\[object/);
-      for (const [, value] of rowsOf(html)) expect(value).not.toBe("");
-    }
-    const [, cough, dizziness] = createSampleRecords();
-    expect(Object.fromEntries(rowsOf(render(cough.summary)))).toMatchObject({
-      "복용 중인 약": "없음",
-      "앓고 있는 병": "없음",
-    });
-    expect(Object.fromEntries(rowsOf(render(dizziness.summary)))).toMatchObject(
-      { "복용 중인 약": "확인 못 했어요", 알레르기: "없음" },
-    );
-  });
-
   it("증상별 항목(items)이 없으면 붓기·넘어진 적 행을 만들지 않는다", () => {
     const labels = rowsOf(render({ ...sampleSummary, items: [] })).map(
       ([label]) => label,
@@ -77,11 +65,14 @@ describe("저장된 요약지", () => {
     expect(labels).toHaveLength(7);
   });
 
-  it("저장 날짜와 면책 문구를 보여 준다", () => {
+  it("호출한 화면이 정한 머리말과 면책 문구를 보여 준다", () => {
     const html = render(sampleSummary);
 
     expect(html).toContain("내 기록 · 2026.10.16 저장");
     expect(html).toContain("환자가 말한 내용을 정리한 것이며 진단이 아닙니다.");
+    expect(render(sampleSummary, false, "AI가 정리한 내용")).toContain(
+      "AI가 정리한 내용",
+    );
   });
 
   it("글자 크게 보기를 켜면 큰 글자 크기를 쓴다", () => {

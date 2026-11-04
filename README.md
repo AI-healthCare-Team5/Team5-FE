@@ -6,10 +6,10 @@
 
 화면 ID와 경로, 담당 이슈는 [`AGENTS.md`](./AGENTS.md)의 "화면과 경로" 표를 기준으로 합니다.
 
-- 연결된 API: 카카오 로그인(인가 URL 발급, 인가 코드 교환)과 토큰 재발급, 문진 시작·답변·이전·취소(S04, S04a, S03), 음성 인식(`POST /api/stt`, S03), 진료과·병원 검색(S05), 요약지 조회·재생성·수정·확정(S06a, S06), 가까운 응급실(E01). 응급 카드 API(`GET /api/intakes/{intakeId}/emergency-card`)는 명세를 확인한 뒤 E02 화면(#30)과 함께 연결합니다. `src/api/client.ts`의 공통 요청 함수와 `src/api/` 아래 도메인 파일을 사용합니다.
+- 연결된 API: 카카오 로그인(인가 URL 발급, 인가 코드 교환)과 토큰 재발급, 문진 시작·답변·이전·취소(S04, S04a, S03), 음성 인식(`POST /api/stt`, S03), 진료과·병원 검색(S05), 요약지 조회·재생성·수정·확정(S06a, S06), 가까운 응급실(E01), 내 정보·로그아웃·탈퇴, 기록 저장 동의(C02), 요약지 보관(S06), 내 기록 목록·상세·삭제(H01, H02), 보호자 등록·삭제(`saveGuardian`, `deleteGuardian`, 화면은 #31·#32). `src/api/client.ts`의 공통 요청 함수와 `src/api/` 아래 도메인 파일을 사용합니다.
 - 카카오맵: `VITE_KAKAO_MAP_APP_KEY`가 있으면 SDK 지도를, 없거나 로드에 실패하면 예시 지도를 표시합니다.
-- 가짜 데이터: 문진·진료과·병원·요약지 가짜 응답과 예시 기록은 `VITE_API_MOCK=true`일 때만 쓰고, 빌드 결과물에는 들어가지 않습니다. 요약지 화면의 "내 기록에 보관" 카드는 mock에서만 보이고, 실제 경로에서는 기록 저장 API 연결 전까지 숨깁니다. 문진·로그인·기록 상태는 메모리에만 있어 새로고침하면 초기화됩니다. 글자 크기는 로컬 저장소, 문진·요약지 ID와 카카오 로그인 복귀 정보는 sessionStorage에 저장합니다.
-- 미연결: 지역 선택(S05b, `getRegions`, #33), 기록 보관·목록 API(#29).
+- 가짜 데이터: 문진·진료과·병원·요약지 가짜 응답과 예시 기록은 `VITE_API_MOCK=true`일 때만 쓰고, 빌드 결과물에는 들어가지 않습니다. 가짜 응답은 로그인 상태, 동의, 보호자, 예시 기록 3건도 흉내 내며 새로고침하면 사라집니다. 요약지 화면의 "내 기록에 보관" 카드는 mock에서만 보이고, 실제 경로에서는 백엔드가 기록 저장 API를 구현하기 전까지 숨깁니다(백엔드 develop 061842f의 `POST /summaries/{id}/save`, `GET /members/me`, `GET /members/me/summaries`, `POST /consents`는 아직 `NOT_IMPLEMENTED`입니다). 백엔드 구현이 배포되고 실제로 확인되면 `SummaryStorage`의 `isMockApi` 조건을 지웁니다. 보관에 성공하면 서버가 문진·요약지를 지우므로, S06을 기록 상세(H02, `/records/{medicalRecordId}`)로 대체해 이동합니다. 문진·로그인 상태는 메모리에만 있어 새로고침하면 초기화되고, 응급 전환 정보와 현재 위치도 메모리에만 두며 로그아웃·탈퇴하면 함께 지웁니다(로그인이 풀린 경우에는 지우지 않습니다). 내 기록·기록 상세·내 정보 화면은 열릴 때 `GET /members/me`로 로그인이 남아 있는지 서버에 확인합니다. 기록과 보호자는 서버에만 있고 프론트에 사본을 두지 않습니다. 글자 크기는 로컬 저장소, 문진·요약지 ID와 카카오 로그인 복귀 정보는 sessionStorage에 저장합니다.
+- 미연결: 지역 선택(S05b, `getRegions`, #33). 응급 카드 조회(`GET /intakes/{intakeId}/emergency-card`)와 그 안의 guardian은 E02(#30)에서 연결합니다. `Guardian` 타입은 `src/api/guardians.ts`에 있습니다. 보호자 화면의 후속 연결: E03(#31)은 `saveGuardianContact`로 저장하고 `GUARDIAN_400`의 `fieldErrors`로 칸별 안내를 합니다. P01 본문(#32)은 `loadMember` 뒤 `useAppStore()`의 `guardian`·`guardianConsent`를 읽고 `removeGuardianContact`로 지웁니다. E02(#30)는 응급 카드 응답의 `guardian`(`Guardian | null`, 로그인했고 등록된 경우에만 전체 번호)을 쓰고, P01의 "응급 카드 미리 보기"는 store의 `guardian`을 씁니다.
 - 음성 문진(S03) 확인 전: 백엔드 `/api/stt`가 아직 명세 단계(`COMMON_501`)일 수 있어 실제 응답으로는 확인하지 못했습니다. 음성이 서버에서 저장되는지, 외부 AI 음성 인식 서비스로 전송되는지는 프론트에서 알 수 없고 백엔드 확인 전입니다. 프론트는 오디오를 브라우저 저장소에 쓰지 않고 STT 요청에만 올립니다. 마이크 녹음은 실기기에서 확인하지 못했습니다.
 - 미구현 경로: `/region`(#33), `/emergency-card`(#30), `/guardian`(#31). 현재는 404로 처리하며, 해당 화면으로 가는 버튼은 화면이 합쳐질 때까지 비활성이거나 숨겨져 있습니다. 위치 권한을 막은 사용자는 `/region`이 생기기 전까지 이어갈 경로가 없습니다. `/my-info`는 계정 영역만 있어 #32 본문을 추가해야 합니다.
 
@@ -19,9 +19,10 @@
 
 - `HospitalMap`: `hospitals: MapHospital[]`, `selectedHospitalId`, `onSelectHospital(id)`로 목록과 선택을 공유합니다. 좌표는 `latitude`, `longitude`입니다.
 - `SummaryDocument`: 서버 요약지(`SummaryContent`, `src/api/summaries.ts`)를 받아 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
-- `SummaryStorage`: `loggedIn`, `saved`, `onLogin`, `onSave`를 전달합니다. 저장이 확인된 경우에만 `saved=true`를 전달합니다. 기록 저장 API(#29)가 연결되기 전에는 `VITE_API_MOCK`이 아니면 카드를 그리지 않고 `appActions.saveSummary`도 보관하지 않습니다. 로그인 전 `appActions.prepareLogin("/summary", saveTarget)`을 호출하면 동의 후 복귀합니다.
-- `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `onLogout`, `onWithdraw`를 전달합니다.
-- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록은 `SummaryContent`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다. 서버 값은 `src/api/enums.ts`의 enum과 `src/api/values.ts`의 표시 함수를 사용합니다.
+- `SummaryStorage`: `loggedIn`, `saved`, `saving`, `message`, `onLogin`, `onSave`를 전달합니다. 서버가 보관했다고 알린 경우(`saveCurrentSummary`가 `saved`를 돌려준 경우)에만 `saved=true`를 전달합니다. 로그인 전 `appActions.prepareLogin("/summary", saveTarget)`을 호출하면 동의 후 복귀해 자동으로 보관합니다. 실제 경로에서는 백엔드가 구현하기 전까지 카드를 그리지 않습니다.
+- 회원·보호자: `src/stores/memberSession.ts`의 `saveGuardianContact`(E03, `GUARDIAN_400`의 칸별 이유 포함)와 `removeGuardianContact`(P01, E02)는 서버가 성공을 알린 뒤에 `useAppStore()`의 `guardian`·`guardianConsent`를 바꿉니다. 내 정보(`loadMember`)를 불러오면 `recordConsent`, `guardian`, `guardianConsent`, `recordCount`가 채워집니다. 보호자 전화번호는 서버가 가운데를 가려 줍니다.
+- `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `busy`, `onLogout`, `onWithdraw`를 전달합니다. 탈퇴 확인 문구는 `withdrawConfirm.ts`에 있고, 내 정보를 불러오지 못했을 때도 `MyInfoPage`가 로그아웃 버튼을 따로 보여 줍니다.
+- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록 상세는 `SummaryContent`와 `SummaryDocument`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다. 서버 값은 `src/api/enums.ts`의 enum과 `src/api/values.ts`의 표시 함수를 사용합니다.
 
 ### 공통 UI 사용 예시
 

@@ -139,4 +139,52 @@ describe("로그아웃·탈퇴", () => {
       expect(getAppState().currentLocation).toBeNull();
     },
   );
+
+  it.each([
+    ["로그아웃", () => appActions.logout()],
+    ["탈퇴", () => appActions.withdraw()],
+  ])(
+    "%s하면 계정에 묶인 값과 응급·위치 정보를 한꺼번에 지운다",
+    async (_name, leave) => {
+      appActions.completeLogin(
+        { nickname: "봄날", needsRecordConsent: false },
+        { returnTo: "/records", saveTarget: null },
+      );
+      appActions.setGuardian({
+        relation: "SON",
+        phoneNumber: "010-****-0000",
+      });
+      appActions.markSummarySaved();
+      vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+      appActions.enterEmergency(entry);
+      await appActions.requestCurrentLocation();
+
+      leave();
+
+      expect(getAppState()).toMatchObject({
+        loggedIn: false,
+        nickname: "",
+        recordConsent: false,
+        guardian: null,
+        guardianConsent: false,
+        recordCount: 0,
+        summarySaved: false,
+        emergency: null,
+        currentLocation: null,
+      });
+    },
+  );
+
+  it("로그인이 풀려도(AUTH_401) 로그인하지 않아도 쓰는 응급 안내는 지우지 않는다", async () => {
+    logIn();
+    vi.mocked(requestCurrentPosition).mockResolvedValueOnce(location);
+    appActions.enterEmergency(entry);
+    await appActions.requestCurrentLocation();
+
+    appActions.markLoggedOut();
+
+    expect(getAppState().loggedIn).toBe(false);
+    expect(getAppState().emergency).toEqual(entry);
+    expect(getAppState().currentLocation).toEqual(location);
+  });
 });

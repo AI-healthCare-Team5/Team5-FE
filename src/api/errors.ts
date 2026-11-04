@@ -74,6 +74,11 @@ export function getIntakeConflictStatus(error: unknown): IntakeStatus | null {
   return isEnumValue(intakeStatuses, status) ? status : null;
 }
 
+// AUTH_401: 로그인하지 않았거나 로그인이 풀렸습니다. apiRequest가 토큰을 한 번 재발급해 보고도 401이면 던집니다.
+export function isUnauthenticated(error: unknown): boolean {
+  return isApiError(error) && error.code === "AUTH_401";
+}
+
 // 문진·진료과·요약지를 찾을 수 없거나(404) 내 것이 아닌(403) 경우입니다.
 // 지워졌거나 보관 시간(1시간)이 지났거나 다른 브라우저의 것이라 더는 쓸 수 없으므로,
 // 화면은 기억해 둔 ID를 지우고 처음으로 보냅니다.

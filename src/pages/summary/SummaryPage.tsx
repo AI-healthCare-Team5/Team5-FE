@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useNavigate } from "react-router";
 import { isMockApi } from "@/api/client";
 import { DesignIcon } from "@/components/DesignIcon";
@@ -9,6 +15,7 @@ import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
 import { SummaryEditForm } from "@/pages/summary/components/SummaryEditForm";
 import { SummaryStorage } from "@/pages/summary/components/SummaryStorage";
 import { isSavePending } from "@/pages/summary/saveAfterReturn";
+import { actionForSaveOutcome } from "@/pages/summary/saveOutcome";
 import {
   createSummaryScreen,
   initialSummaryView,
@@ -16,16 +23,33 @@ import {
 } from "@/pages/summary/summaryScreen";
 import { formatRecordDate } from "@/pages/records/formatRecordDate";
 import { appActions, useAppStore } from "@/stores/appStore";
+import {
+  isSavingSummary,
+  saveCurrentSummary,
+  subscribeSaving,
+  type SaveSummaryOutcome,
+} from "@/stores/recordSave";
+import type { SummarySession } from "@/stores/summarySession";
 
 export function SummaryPage() {
   const { loggedIn, recordConsent, summarySaved, saveTarget } = useAppStore();
   const navigate = useNavigate();
   const [view, setView] = useState(initialSummaryView);
   const [large, setLarge] = useState(false);
+  // 보관하지 못했을 때의 안내입니다.
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const screenRef = useRef<SummaryScreen | null>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
+  // 보관 요청이 끝났을 때 이미 이 화면을 떠났다면 안내나 이동을 하지 않습니다.
+  const mounted = useRef(false);
   const { session, summary } = view;
+  // 보관 요청이 진행 중인지는 요청을 보낸 쪽(버튼, 로그인·동의 뒤 자동 보관)과 상관없이 같은 값으로 읽습니다.
+  const saving = useSyncExternalStore(
+    subscribeSaving,
+    () => isSavingSummary(session?.summaryId),
+    () => false,
+  );
 
   // 불러오기와 확인·수정 요청, 이동은 summaryScreen.ts가 맡습니다.
   // 화면을 떠나면 진행 중인 요청을 취소합니다.
@@ -45,6 +69,13 @@ export function SummaryPage() {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   // 수정 폼이 닫히면 눌렀던 버튼이 다시 그려지므로 그 버튼으로 포커스를 돌려줍니다.
   useEffect(() => {
     if (view.editing || !returnFocus.current) return;
@@ -52,26 +83,58 @@ export function SummaryPage() {
     editButtonRef.current?.focus();
   }, [view.editing]);
 
-  // 로그인·동의를 마치고 돌아왔으면 보관하려던 요약지를 보관합니다.
-  // saveSummary는 같은 요약지를 두 번 보관하지 않아 effect가 두 번 돌아도 안전합니다.
-  useEffect(() => {
-    if (!session || !summary) return;
-    const state = { loggedIn, recordConsent, summarySaved, saveTarget };
-    if (!isSavePending(state, session)) return;
-    appActions.saveSummary(summary);
-    // 보관하러 나갔다는 기억을 지웁니다.
-    appActions.prepareLogin();
-  }, [session, summary, loggedIn, recordConsent, summarySaved, saveTarget]);
-
-  function closeEditForm() {
-    returnFocus.current = true;
-    screenRef.current?.cancelEdit();
-  }
-
   function goToRecordFlow(path: "/login" | "/record-consent") {
     // 로그인·동의를 마치면 이 화면으로 돌아와 이 요약지를 보관합니다.
     appActions.prepareLogin("/summary", session);
     navigate(path);
+  }
+
+  // 보관 결과에 따라 안내하거나 이동합니다.
+  const showSaveOutcome = useCallback(
+    (outcome: SaveSummaryOutcome) => {
+      if (!mounted.current) return;
+      const action = actionForSaveOutcome(outcome);
+      if (action.kind === "message") {
+        setSaveMessage(action.message);
+        return;
+      }
+      setSaveMessage(null);
+      // 로그인·동의를 마치면 이 화면으로 돌아와 이 요약지를 보관합니다.
+      if (action.resumeSave) appActions.prepareLogin("/summary", session);
+      navigate(action.to, { replace: action.replace });
+    },
+    [session, navigate],
+  );
+
+  // 서버에 보관을 요청합니다. 같은 요약지를 동시에 두 번 보관하려 해도 요청은 한 번만 보냅니다(StrictMode의 effect 두 번 실행 포함).
+  // 버튼을 누른 경우와 로그인·동의 뒤 자동 보관 모두 이 요청을 씁니다.
+  const requestSave = useCallback(
+    (target: SummarySession) => {
+      void saveCurrentSummary(target).then(showSaveOutcome);
+    },
+    [showSaveOutcome],
+  );
+
+  // 로그인·동의를 마치고 돌아왔으면 보관하려던 요약지를 보관합니다.
+  useEffect(() => {
+    if (!session || !summary) return;
+    const state = { loggedIn, recordConsent, summarySaved, saveTarget };
+    if (!isSavePending(state, session)) return;
+    // 보관하러 나갔다는 기억을 지웁니다. 실패하면 보관하기 버튼으로 다시 시도합니다.
+    appActions.prepareLogin();
+    requestSave(session);
+  }, [
+    session,
+    summary,
+    loggedIn,
+    recordConsent,
+    summarySaved,
+    saveTarget,
+    requestSave,
+  ]);
+  function closeEditForm() {
+    returnFocus.current = true;
+    screenRef.current?.cancelEdit();
   }
 
   if (view.phase !== "ready" || !summary || !session) {
@@ -99,7 +162,8 @@ export function SummaryPage() {
     );
   }
 
-  const busy = view.busy !== null;
+  // 보관 요청이 진행 중이면 확인·수정도 잠급니다. 서버가 보관하면 요약지를 지우므로 그 뒤의 요청은 SUMMARY_404가 됩니다.
+  const busy = view.busy !== null || saving;
   const caption = view.createdAt
     ? `AI가 정리한 내용 · ${formatRecordDate(view.createdAt)}`
     : "AI가 정리한 내용";
@@ -178,12 +242,17 @@ export function SummaryPage() {
           <SummaryStorage
             loggedIn={loggedIn}
             saved={summarySaved}
+            saving={busy}
+            message={saveMessage}
             onLogin={() => goToRecordFlow("/login")}
-            onSave={() =>
-              recordConsent
-                ? appActions.saveSummary(summary)
-                : goToRecordFlow("/record-consent")
-            }
+            onSave={() => {
+              if (!recordConsent) {
+                goToRecordFlow("/record-consent");
+                return;
+              }
+              setSaveMessage(null);
+              requestSave(session);
+            }}
           />
           <div className="flex flex-col gap-3">
             <Button

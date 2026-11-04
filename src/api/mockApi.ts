@@ -5,6 +5,7 @@ import {
   ageGroups,
   genders,
   isEnumValue,
+  relations,
   summarySteps,
   yesNoUnknownAnswers,
   type BodyPart,
@@ -14,7 +15,10 @@ import {
   type SummaryStatus,
   type YesNoUnknown,
 } from "@/api/enums";
+import type { KakaoLoginResult } from "@/api/auth";
+import type { ConsentResult } from "@/api/consents";
 import { ApiError } from "@/api/errors";
+import type { GuardianRequest, GuardianResult } from "@/api/guardians";
 import type {
   EmergencyRoomParams,
   HealthCenterResult,
@@ -43,6 +47,13 @@ import type {
   SummaryStepState,
   SummaryUpdateRequest,
 } from "@/api/summaries";
+import type { MemberInfo } from "@/api/members";
+import type {
+  DeleteRecordResult,
+  RecordDetail,
+  RecordListResult,
+  SaveRecordResult,
+} from "@/api/records";
 import type { RegionListResult } from "@/api/regions";
 import type { SttResult } from "@/api/stt";
 import type { CollectedList } from "@/api/types";
@@ -934,6 +945,349 @@ export function retrySummary(intakeId: string): SummaryRetryResult {
   record.failing = false;
   record.content = buildContent(intake);
   return { intakeId, summaryId: record.summaryId, status: "GENERATING" };
+}
+
+// ---- 회원·기록 ----
+
+// 서버 설정의 현재 동의 문구 버전입니다. 프론트가 다른 버전을 보내면 400을 돌려주려고 프론트 상수와 따로 둡니다.
+const MOCK_POLICY_VERSION = "v1";
+
+interface MockGuardian {
+  guardianId: number;
+  relation: GuardianRequest["relation"];
+  // 숫자만 담습니다. 응답에서는 가운데를 가립니다.
+  phoneNumber: string;
+}
+
+interface MockConsent {
+  consentId: number;
+  agreedAt: string;
+}
+
+interface MockRecord {
+  medicalRecordId: number;
+  createdAt: string;
+  content: SummaryContent;
+}
+
+const member = {
+  loggedIn: false,
+  // 첫 로그인에서 예시 기록을 한 번만 넣습니다. 탈퇴한 뒤 다시 로그인해도 기록은 돌아오지 않습니다.
+  seeded: false,
+  recordConsent: null as MockConsent | null,
+  guardianConsent: null as MockConsent | null,
+  guardian: null as MockGuardian | null,
+};
+const records = new Map<number, MockRecord>();
+// 보관한 요약지 ID입니다. 보관하면 요약지를 지우지만 다시 보관하려 하면 기록 ID를 돌려주려고 남깁니다.
+const savedSummaries = new Map<string, number>();
+let consentSerial = 0;
+let guardianSerial = 0;
+let recordSerial = 0;
+
+function requireLogin() {
+  if (!member.loggedIn) {
+    throw new ApiError("AUTH_401", "로그인이 필요해요.", 401);
+  }
+}
+
+// 서버가 H01 두 번째 줄을 만드는 방식(onsetDetail과 첫 번째 증상별 항목)을 흉내 냅니다.
+function recordSubtitle(content: SummaryContent): string {
+  const first = [...content.items]
+    .sort((a, b) => a.order - b.order)
+    .find((item) => item.value !== null);
+  return [content.onsetDetail, first && `${first.label} ${first.value}`]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
+}
+
+function maskPhoneNumber(digits: string): string {
+  const stars = "*".repeat(digits.length - 7);
+  return `${digits.slice(0, 3)}-${stars}-${digits.slice(-4)}`;
+}
+
+function toGuardian(guardian: MockGuardian) {
+  return {
+    relation: guardian.relation,
+    phoneNumber: maskPhoneNumber(guardian.phoneNumber),
+  };
+}
+
+function addRecord(createdAt: string, content: SummaryContent): MockRecord {
+  recordSerial += 1;
+  const record = { medicalRecordId: recordSerial, createdAt, content };
+  records.set(record.medicalRecordId, record);
+  return record;
+}
+
+// 화면 확인용 예시 기록입니다. 모두 지어낸 값입니다.
+function seedRecords() {
+  const base: SummaryContent = {
+    ageGroup: "SEVENTIES",
+    gender: "FEMALE",
+    inputMode: "VOICE",
+    mainSymptom: "어지러움",
+    bodyPart: "HEAD",
+    onset: "DAYS_2_3",
+    onsetDetail: "이틀 전부터",
+    extraNote: null,
+    // 묻지 못한 항목(null)이 있는 기록입니다.
+    medications: null,
+    conditions: null,
+    allergies: [],
+    items: [],
+    department: { ...mockDepartment, departmentName: "내과" },
+    isConfirmed: false,
+  };
+  addRecord("2026-09-03T10:00:00+09:00", base);
+  addRecord("2026-09-28T10:00:00+09:00", {
+    ...structuredClone(base),
+    mainSymptom: "기침",
+    bodyPart: "CHEST",
+    onset: "OVER_WEEK",
+    onsetDetail: "일주일 전부터",
+    // 건강 정보를 모두 "없음"([])으로 답한 기록입니다.
+    medications: [],
+    conditions: [],
+  });
+  addRecord("2026-10-16T10:00:00+09:00", {
+    ...structuredClone(base),
+    mainSymptom: "무릎 통증",
+    bodyPart: "LEG_KNEE",
+    onset: "DAYS_2_3",
+    onsetDetail: "3일 전부터",
+    medications: [{ name: "혈압약", detail: "매일 아침" }],
+    conditions: [{ name: "고혈압", detail: null }],
+    allergies: [{ name: "약", detail: "페니실린" }],
+    items: [
+      { order: 1, label: "붓기", question: "무릎이 부었나요?", value: "있음" },
+      {
+        order: 2,
+        label: "넘어진 적",
+        question: "최근에 넘어지신 적이 있나요?",
+        value: "없음",
+      },
+    ],
+    department: { ...mockDepartment },
+  });
+}
+
+// 카카오 로그인입니다. 가짜 응답에서는 카카오를 거치지 않습니다.
+export function loginMember(): KakaoLoginResult {
+  const isNewMember = !member.seeded;
+  if (!member.seeded) {
+    seedRecords();
+    member.seeded = true;
+  }
+  member.loggedIn = true;
+  return {
+    memberId: 1,
+    nickname: "봄날",
+    isNewMember,
+    needsRecordConsent: member.recordConsent === null,
+  };
+}
+
+// 서버처럼 로그아웃하면 이 브라우저의 문진·요약지도 지웁니다.
+export function logoutMember() {
+  member.loggedIn = false;
+  intakes.clear();
+  summaries.clear();
+}
+
+export function getMyInfo(): MemberInfo {
+  requireLogin();
+  const status = (consent: MockConsent | null) => ({
+    agreed: consent !== null,
+    policyVersion: consent ? MOCK_POLICY_VERSION : null,
+    agreedAt: consent?.agreedAt ?? null,
+  });
+  return {
+    memberId: 1,
+    nickname: "봄날",
+    provider: "KAKAO",
+    consents: {
+      record: status(member.recordConsent),
+      guardian: status(member.guardianConsent),
+    },
+    recordCount: records.size,
+    guardian: member.guardian ? toGuardian(member.guardian) : null,
+  };
+}
+
+// 기록·보호자를 지우고 동의를 모두 거둡니다. 다시 로그인해도 기록은 돌아오지 않습니다.
+export function withdrawMember() {
+  requireLogin();
+  records.clear();
+  savedSummaries.clear();
+  member.recordConsent = null;
+  member.guardianConsent = null;
+  member.guardian = null;
+  logoutMember();
+}
+
+export function agreeToRecordConsent(request: {
+  consentType: string;
+  policyVersion: string;
+}): ConsentResult {
+  requireLogin();
+  if (request.consentType !== "RECORD") {
+    throw badRequest(
+      "CONSENT_400",
+      "consentType",
+      "RECORD만 동의할 수 있어요.",
+    );
+  }
+  if (request.policyVersion !== MOCK_POLICY_VERSION) {
+    throw badRequest(
+      "CONSENT_400",
+      "policyVersion",
+      "동의 문구 버전이 달라요.",
+    );
+  }
+  // 이미 같은 버전에 동의해 있으면 기존 동의를 그대로 돌려줍니다(CONSENT_200).
+  if (member.recordConsent === null) {
+    consentSerial += 1;
+    member.recordConsent = {
+      consentId: consentSerial,
+      agreedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    consentId: member.recordConsent.consentId,
+    consentType: "RECORD",
+    policyVersion: MOCK_POLICY_VERSION,
+    agreedAt: member.recordConsent.agreedAt,
+  };
+}
+
+export function saveGuardian(request: GuardianRequest): GuardianResult {
+  requireLogin();
+  const errors: { field: string; reason: string }[] = [];
+  if (!(relations as readonly string[]).includes(request.relation)) {
+    errors.push({ field: "relation", reason: "관계를 선택해 주세요" });
+  }
+  if (!/^\d{10,11}$/.test(request.phoneNumber)) {
+    errors.push({ field: "phoneNumber", reason: "숫자 10~11자리여야 해요" });
+  }
+  if (request.consentAgreed !== true) {
+    errors.push({ field: "consentAgreed", reason: "동의에 체크해 주세요" });
+  }
+  if (request.policyVersion !== MOCK_POLICY_VERSION) {
+    errors.push({ field: "policyVersion", reason: "동의 문구 버전이 달라요" });
+  }
+  if (errors.length > 0) {
+    throw new ApiError("GUARDIAN_400", "입력을 확인해 주세요.", 400, {
+      errors,
+    });
+  }
+  // 회원당 보호자는 1명이라 항상 덮어씁니다.
+  guardianSerial += 1;
+  member.guardian = {
+    guardianId: member.guardian?.guardianId ?? guardianSerial,
+    relation: request.relation,
+    phoneNumber: request.phoneNumber,
+  };
+  consentSerial += 1;
+  member.guardianConsent = {
+    consentId: consentSerial,
+    agreedAt: new Date().toISOString(),
+  };
+  return {
+    guardianId: member.guardian.guardianId,
+    ...toGuardian(member.guardian),
+  };
+}
+
+// 보호자를 지우면 보호자 연락처 저장 동의도 함께 거둡니다.
+export function deleteGuardian() {
+  requireLogin();
+  if (!member.guardian) {
+    throw new ApiError("GUARDIAN_404", "등록된 보호자가 없어요.", 404);
+  }
+  member.guardian = null;
+  member.guardianConsent = null;
+}
+
+// 요약지를 기록으로 복사하고 요약지·문진은 지웁니다. 이미 보관한 요약지는 기록 ID와 함께 SUMMARY_409입니다.
+export function saveSummaryToRecords(summaryId: string): SaveRecordResult {
+  requireLogin();
+  if (member.recordConsent === null) {
+    throw new ApiError("CONSENT_403", "기록 저장에 동의해 주세요.", 403);
+  }
+  const savedId = savedSummaries.get(summaryId);
+  if (savedId !== undefined) {
+    throw new ApiError("SUMMARY_409", "이미 보관한 요약지예요.", 409, {
+      medicalRecordId: savedId,
+    });
+  }
+  const summary = findSummary(summaryId);
+  if (statusOf(summary) !== "DONE") {
+    throw new ApiError("SUMMARY_409", "아직 요약지를 만드는 중이에요.", 409);
+  }
+  const savedAt = new Date().toISOString();
+  const record = addRecord(savedAt, structuredClone(summary.content));
+  savedSummaries.set(summaryId, record.medicalRecordId);
+  summaries.delete(summaryId);
+  intakes.delete(summary.intakeId);
+  return { medicalRecordId: record.medicalRecordId, savedAt };
+}
+
+export function listRecords(params: {
+  page: number;
+  size: number;
+}): RecordListResult {
+  requireLogin();
+  const { page, size } = params;
+  if (!Number.isInteger(page) || page < 0) {
+    throw badRequest("SUMMARY_400", "page", "0 이상이어야 해요.");
+  }
+  if (!Number.isInteger(size) || size < 1 || size > 50) {
+    throw badRequest("SUMMARY_400", "size", "1에서 50 사이여야 해요.");
+  }
+  // 최근 순입니다. 기록 ID는 보관한 순서대로 커집니다.
+  const all = [...records.values()].sort(
+    (a, b) => b.medicalRecordId - a.medicalRecordId,
+  );
+  const start = page * size;
+  return {
+    page,
+    size,
+    totalCount: all.length,
+    hasNext: start + size < all.length,
+    records: all.slice(start, start + size).map((record) => ({
+      medicalRecordId: record.medicalRecordId,
+      createdAt: record.createdAt,
+      departmentName: record.content.department.departmentName,
+      mainSymptom: record.content.mainSymptom,
+      subtitle: recordSubtitle(record.content),
+    })),
+  };
+}
+
+function findRecord(medicalRecordId: number): MockRecord {
+  const record = records.get(medicalRecordId);
+  if (!record) {
+    throw new ApiError("SUMMARY_404", "기록을 찾을 수 없어요.", 404);
+  }
+  return record;
+}
+
+export function getRecord(medicalRecordId: number): RecordDetail {
+  requireLogin();
+  const record = findRecord(medicalRecordId);
+  return {
+    medicalRecordId,
+    createdAt: record.createdAt,
+    summary: structuredClone(record.content),
+  };
+}
+
+export function deleteRecord(medicalRecordId: number): DeleteRecordResult {
+  requireLogin();
+  findRecord(medicalRecordId);
+  records.delete(medicalRecordId);
+  return { medicalRecordId };
 }
 
 // ---- 음성 인식 ----
