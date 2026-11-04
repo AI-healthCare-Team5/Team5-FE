@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
+import { isMockApi } from "@/api/client";
 import { DesignIcon } from "@/components/DesignIcon";
 import { HospitalMap } from "@/components/map/HospitalMap";
 import { ActionLink, PageTitle } from "@/components/ui";
@@ -15,13 +16,26 @@ import { formatRecordDate } from "@/pages/records/formatRecordDate";
 // 추천 이유는 API가 만든 문장이라, 면책 문장은 화면에서 항상 붙입니다.
 const disclaimer = "진단이 아니라 진료과 안내예요.";
 
-// 문진·병원 API(#26)를 연결하기 전까지는 같은 모양의 가짜 응답을 씁니다.
+// 문진·병원 API(#26)를 연결하기 전까지는 가짜 응답(VITE_API_MOCK)에서만 같은 모양의 가짜 응답을 쓰고,
+// 실제 경로에서는 가짜 진료과·병원이 실제 안내처럼 보이지 않도록 준비 중으로 보여 줍니다.
 export function HospitalsPage() {
   // 진료 시간 문구의 "오늘·내일"을 화면을 연 시각 기준으로 정합니다.
   const [now] = useState(() => new Date());
-  const department = sampleDepartment;
-  const [outcome] = useState(() => createSampleHospitalSearch(now));
+  const [outcome] = useState(() =>
+    isMockApi ? createSampleHospitalSearch(now) : null,
+  );
   const [selectedId, setSelectedId] = useState<string>();
+  if (!outcome) {
+    return (
+      <>
+        <PageTitle description="병원 검색 서버를 연결한 뒤에 가까운 병원을 안내할 수 있어요.">
+          병원 안내를 준비 중이에요
+        </PageTitle>
+        <ActionLink to="/">처음으로</ActionLink>
+      </>
+    );
+  }
+  const department = sampleDepartment;
   const hospitals = outcome.kind === "found" ? outcome.result.hospitals : [];
   // 고르기 전에는 지금 목록의 첫 병원을 선택한 것으로 봅니다.
   const activeId = selectedId ?? hospitals[0]?.hospitalId.toString();
