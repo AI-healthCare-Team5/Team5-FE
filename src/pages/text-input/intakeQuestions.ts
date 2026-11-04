@@ -81,9 +81,13 @@ export function initialQuestionsView(
   return { intake: session.intake, busy: false, message: null, restored: null };
 }
 
-// S04의 버튼 입력으로 시작한 문진은 BASIC_INFO부터 묻고, progress는 1부터 셉니다.
-function isFirstQuestion(intake: IntakeResponse): boolean {
-  return intake.stage === "BASIC_INFO" && intake.progress.current === 1;
+// 문진을 시작할 때 받은 첫 질문입니다. 단계마다 progress는 1부터 세므로, 시작한 단계의 1번 질문이 맨 처음입니다.
+// 버튼으로 시작하면 BASIC_INFO부터, 말·글로 시작하면 SYMPTOM부터 묻습니다.
+function isFirstQuestion(
+  intake: IntakeResponse,
+  firstStage: IntakeSession["firstStage"],
+): boolean {
+  return intake.stage === firstStage && intake.progress.current === 1;
 }
 
 // 서버가 이 답을 받아 다음으로 넘어갔는지 알려 줍니다.
@@ -246,7 +250,7 @@ export function createIntakeQuestions(
   async function back() {
     const { intake } = view;
     if (view.busy || intake.status !== "IN_PROGRESS") return;
-    if (isFirstQuestion(intake)) {
+    if (isFirstQuestion(intake, session.firstStage)) {
       returnToStart();
       return;
     }

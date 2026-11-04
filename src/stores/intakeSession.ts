@@ -1,4 +1,4 @@
-import type { InputMode } from "@/api/enums";
+import type { InputMode, IntakeStage } from "@/api/enums";
 import type { IntakeResponse } from "@/api/intakes";
 import { clearSummarySession } from "@/stores/summarySession";
 
@@ -16,6 +16,9 @@ export interface SubmittedAnswer {
 export interface IntakeSession {
   // 서버가 마지막으로 알려 준 문진 상태입니다. COMPLETED면 department와 summaryId가 있습니다.
   intake: IntakeResponse;
+  // 문진을 시작했을 때 받은 첫 질문의 단계입니다. 버튼으로 시작하면 BASIC_INFO, 말·글로 시작하면 SYMPTOM이라
+  // 어느 질문이 맨 처음인지(그 앞으로는 돌아갈 수 없는지) 알려 줍니다.
+  firstStage: IntakeStage;
   // 질문마다 마지막으로 한 답입니다. 키는 questionId입니다.
   answers: Record<string, SubmittedAnswer>;
 }
@@ -26,7 +29,7 @@ let current: IntakeSession | null = null;
 // 요약지 ID는 이 문진이 COMPLETED가 되면 새로 기억하므로, 그 전에는 이전 요약지가 보이지 않게 합니다.
 export function beginIntakeSession(intake: IntakeResponse) {
   clearSummarySession();
-  current = { intake, answers: {} };
+  current = { intake, firstStage: intake.stage, answers: {} };
 }
 
 // 기억한 문진을 읽습니다. 없으면 null입니다. 돌려준 값을 바꿔도 기억한 값에는 영향이 없습니다.

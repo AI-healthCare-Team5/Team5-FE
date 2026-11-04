@@ -6,13 +6,14 @@ import type { IntakeResponse, IntakeStartRequest } from "@/api/intakes";
 async function loadMockApi() {
   vi.resetModules();
   vi.stubEnv("VITE_API_MOCK", "true");
-  const [intakes, summaries, hospitals, regions] = await Promise.all([
+  const [intakes, summaries, hospitals, regions, stt] = await Promise.all([
     import("@/api/intakes"),
     import("@/api/summaries"),
     import("@/api/hospitals"),
     import("@/api/regions"),
+    import("@/api/stt"),
   ]);
-  return { ...intakes, ...summaries, ...hospitals, ...regions };
+  return { ...intakes, ...summaries, ...hospitals, ...regions, ...stt };
 }
 
 type MockApi = Awaited<ReturnType<typeof loadMockApi>>;
@@ -1058,5 +1059,77 @@ describe("가짜 응답의 취소", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
 
     await expect(api.getIntake(started.intakeId)).resolves.toEqual(started);
+  });
+});
+
+describe("가짜 음성 인식", () => {
+  it("말하는 순서대로 가짜 문장을 돌려주고 끝까지 가면 처음부터 다시 돈다", async () => {
+    const api = await loadMockApi();
+    const audio = new Blob(["가짜"], { type: "audio/webm" });
+
+    const first = await api.recognizeSpeech(audio);
+    const rest = [];
+    for (let i = 0; i < 7; i += 1) rest.push(await api.recognizeSpeech(audio));
+    const again = await api.recognizeSpeech(audio);
+
+    expect(first.text).toBe("무릎이 사흘째 아파요");
+    expect(first.durationSec).toBeGreaterThan(0);
+    expect(rest.map((item) => item.text)).toEqual([
+      "네",
+      "아니요",
+      "70대",
+      "여성",
+      "없어요",
+      "없어요",
+      "없어요",
+    ]);
+    expect(again.text).toBe(first.text);
+  });
+
+  it("가짜 문장으로 글로 시작하는 문진을 끝까지 말로 이어갈 수 있다", async () => {
+    const api = await loadMockApi();
+    const audio = new Blob(["가짜"], { type: "audio/webm" });
+    const spoken = async () => (await api.recognizeSpeech(audio)).text;
+
+    let intake = await api.startIntake({
+      inputMode: "VOICE",
+      text: await spoken(),
+    });
+    while (intake.status === "IN_PROGRESS") {
+      const result = await api.answerIntake(intake.intakeId, {
+        questionId: intake.question!.questionId,
+        inputMode: "VOICE",
+        answer: await spoken(),
+      });
+      if (result.kind !== "advanced") throw new Error("이어져야 해요");
+      expect(result.intake.reask).toBe(false);
+      intake = result.intake;
+    }
+
+    expect(intake.status).toBe("COMPLETED");
+  });
+
+  it("빈 녹음은 서버처럼 STT_400이다", async () => {
+    const api = await loadMockApi();
+
+    await expect(api.recognizeSpeech(new Blob([]))).rejects.toMatchObject({
+      code: "STT_400",
+      status: 400,
+    });
+  });
+
+  it("취소된 요청은 문장을 소비하지 않는다", async () => {
+    const api = await loadMockApi();
+    const audio = new Blob(["가짜"], { type: "audio/webm" });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      api.recognizeSpeech(audio, controller.signal),
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect((await api.recognizeSpeech(audio)).text).toBe(
+      "무릎이 사흘째 아파요",
+    );
   });
 });

@@ -5,6 +5,10 @@ import type { IntakeOption, IntakeQuestion } from "@/api/intakes";
 // 응답의 모양은 src/api/intakes.ts의 타입을 그대로 씁니다.
 export type { IntakeOption, IntakeQuestion };
 
+// 못 알아들어 같은 질문을 다시 묻거나(reask: true) 음성 인식이 STT_422로 실패했을 때 보여 주는 안내 문구입니다.
+// 화면에는 ReaskNotice가 이 상수로 그리고, sttFailure의 message도 같은 상수를 씁니다.
+export const REASK_MESSAGE = "다시 말씀해 주세요";
+
 // YES_NO_UNKNOWN 질문은 options가 null이라 버튼 문구를 화면에서 정합니다. S03의 선택지와 같은 문구입니다.
 const yesNoUnknownOptions: { code: YesNoUnknown; label: string }[] = [
   { code: "YES", label: "네" },
