@@ -7,6 +7,7 @@ import { InterviewPage } from "@/pages/interview/InterviewPage";
 import { TextInputPage } from "@/pages/text-input/TextInputPage";
 import { TextInputQuestionsPage } from "@/pages/text-input/TextInputQuestionsPage";
 import { LocationPage } from "@/pages/location/LocationPage";
+import { RegionPage } from "@/pages/region/RegionPage";
 import { HospitalsPage } from "@/pages/hospitals/HospitalsPage";
 import { HospitalEmptyPage } from "@/pages/hospital-empty/HospitalEmptyPage";
 import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: "/text-input", element: <TextInputPage /> },
       { path: "/text-input/questions", element: <TextInputQuestionsPage /> },
       { path: "/location", element: <LocationPage /> },
+      { path: "/region", element: <RegionPage /> },
       { path: "/hospitals", element: <HospitalsPage /> },
       { path: "/hospital-empty", element: <HospitalEmptyPage /> },
       { path: "/hospital-error", element: <HospitalErrorPage /> },

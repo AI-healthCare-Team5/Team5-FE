@@ -62,7 +62,7 @@
 | S03         | 음성 문진                       | `/interview`                               | 구현, STT·음성 문진 연결 (#28)                                 |
 | S04 / S04a  | 글 입력 / 추가 질문             | `/text-input`, `/text-input/questions`     | 구현                                                           |
 | S05a        | 위치 확인                       | `/location`                                | 구현                                                           |
-| S05b        | 지역 선택                       | `/region`                                  | 미구현 (#33)                                                   |
+| S05b        | 지역 선택                       | `/region`                                  | 구현                                                           |
 | S05         | 병원 안내                       | `/hospitals`                               | 구현, 진료과·병원 API 연결 (#26)                               |
 | S05c / S05d | 근처 병원 없음 / 병원 정보 오류 | `/hospital-empty`, `/hospital-error`       | 구현                                                           |
 | S06a        | 요약지 만드는 중                | `/summary-loading`                         | 구현                                                           |
