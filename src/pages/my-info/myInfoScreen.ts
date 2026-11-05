@@ -2,11 +2,12 @@ import { getErrorMessage, isApiError } from "@/api/errors";
 import {
   loadMember,
   logoutMember,
+  removeGuardianContact,
   withdrawAccount,
 } from "@/stores/memberSession";
 
-// P01(내 정보)의 계정 영역 동작입니다. React 밖에 두어서 화면 없이 테스트합니다.
-// 로그인 상태, 동의, 기록 수는 불러온 내 정보가 store에 담기므로 화면은 store에서 읽습니다.
+// P01(내 정보)의 계정 영역과 보호자 연락처 동작입니다. React 밖에 두어서 화면 없이 테스트합니다.
+// 로그인 상태, 동의, 기록 수, 보호자는 불러온 내 정보가 store에 담기므로 화면은 store에서 읽습니다.
 
 export const SIGNED_OUT_MESSAGE = "로그인이 풀렸어요. 다시 로그인해 주세요.";
 
@@ -15,10 +16,12 @@ export interface MyInfoView {
   phase: "loading" | "ready" | "error";
   // phase가 error일 때의 안내입니다.
   message: string | null;
-  // 로그아웃·탈퇴 요청이 진행 중이면 어떤 요청인지 알려 줍니다. 버튼을 잠가 이중 전송을 막습니다.
-  busy: "logout" | "withdraw" | null;
-  // 로그아웃·탈퇴가 실패했을 때의 안내입니다.
+  // 로그아웃·탈퇴·보호자 지우기 요청이 진행 중이면 어떤 요청인지 알려 줍니다. 버튼을 잠가 이중 전송을 막습니다.
+  busy: "logout" | "withdraw" | "removeGuardian" | null;
+  // 로그아웃·탈퇴가 실패했거나 요청 중 로그인이 풀렸을 때의 안내입니다.
   actionMessage: string | null;
+  // 보호자 연락처 지우기가 실패했을 때의 안내입니다. 누른 버튼이 있는 보호자 카드에 보여 줍니다.
+  guardianMessage: string | null;
 }
 
 export const initialMyInfoView: MyInfoView = {
@@ -26,6 +29,7 @@ export const initialMyInfoView: MyInfoView = {
   message: null,
   busy: null,
   actionMessage: null,
+  guardianMessage: null,
 };
 
 // start: 로그아웃하거나 탈퇴해서 처음(S01)으로 갑니다.
@@ -46,6 +50,9 @@ export interface MyInfoScreen {
   logout: () => Promise<void>;
   // 탈퇴합니다. 내 정보를 불러온 뒤에만 할 수 있습니다. 서버가 기록·보호자를 지우고 동의를 모두 철회합니다.
   withdraw: () => Promise<void>;
+  // 보호자 연락처를 지웁니다. 내 정보를 불러온 뒤에만 할 수 있고, 서버가 보호자 저장 동의도 함께 철회합니다.
+  // 지웠으면 true입니다. 화면은 이 값으로 포커스를 옮깁니다.
+  removeGuardian: () => Promise<boolean>;
   // 화면을 떠날 때 부릅니다. 진행 중인 요청을 취소하고 더는 view나 이동을 알리지 않습니다.
   dispose: () => void;
 }
@@ -154,10 +161,44 @@ export function createMyInfoScreen(hooks: MyInfoScreenHooks): MyInfoScreen {
     }
   }
 
+  async function removeGuardian(): Promise<boolean> {
+    if (view.phase !== "ready" || view.busy) return false;
+    update({
+      busy: "removeGuardian",
+      actionMessage: null,
+      guardianMessage: null,
+    });
+    try {
+      // 탈퇴처럼 화면을 떠나도 취소하지 않습니다. 서버가 지웠는데 store만 남는 일을 막습니다.
+      const outcome = await removeGuardianContact();
+      if (outcome.kind === "removed") {
+        update({ busy: null });
+        return true;
+      }
+      if (outcome.kind === "needsLogin") {
+        update({ busy: null, actionMessage: SIGNED_OUT_MESSAGE });
+        return false;
+      }
+      update({
+        busy: null,
+        guardianMessage: outcome.kind === "saved" ? null : outcome.message,
+      });
+      return false;
+    } catch (error) {
+      handleFailure(
+        error,
+        false,
+        () => update({ busy: null }),
+        (message) => update({ busy: null, guardianMessage: message }),
+      );
+      return false;
+    }
+  }
+
   function dispose() {
     disposed = true;
     loadRequest?.abort();
   }
 
-  return { load, logout, withdraw, dispose };
+  return { load, logout, withdraw, removeGuardian, dispose };
 }

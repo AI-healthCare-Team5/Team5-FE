@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
 import { AccountCard } from "@/pages/my-info/components/AccountCard";
+import { GuardianCard } from "@/pages/my-info/components/GuardianCard";
+import { GuardianConsentCard } from "@/pages/my-info/components/GuardianConsentCard";
 import {
   createMyInfoScreen,
   initialMyInfoView,
@@ -10,7 +12,8 @@ import {
 } from "@/pages/my-info/myInfoScreen";
 import { useAppStore } from "@/stores/appStore";
 
-// P01 본문(#32)은 이 페이지에서 계정 영역 아래에 합칩니다.
+// P01 내 정보입니다. 계정 영역 아래에 보호자 연락처와 저장 동의를 둡니다.
+// 보호자는 로그인한 회원에게만 저장되므로 로그인한 경우에만 그립니다.
 export function MyInfoPage() {
   const state = useAppStore();
   const navigate = useNavigate();
@@ -34,7 +37,7 @@ export function MyInfoPage() {
 
   return (
     <>
-      <PageTitle description="계정과 저장된 기록을 관리할 수 있어요.">
+      <PageTitle description="계정과 응급 카드에 쓰이는 정보예요.">
         내 정보
       </PageTitle>
       {view.phase === "ready" && view.actionMessage && (
@@ -83,6 +86,20 @@ export function MyInfoPage() {
           onLogout={() => void screenRef.current?.logout()}
           onWithdraw={() => void screenRef.current?.withdraw()}
         />
+      )}
+      {view.phase === "ready" && state.loggedIn && (
+        <>
+          <GuardianCard
+            guardian={state.guardian}
+            busy={busy}
+            message={view.guardianMessage}
+            onRemove={() =>
+              screenRef.current?.removeGuardian() ?? Promise.resolve(false)
+            }
+          />
+          {state.guardianConsent && <GuardianConsentCard />}
+          {/* "응급 카드 미리 보기"(E02, #30)는 /emergency-card 경로가 생기면 이 자리에 둡니다. */}
+        </>
       )}
       <ActionLink to="/" variant="quiet">
         처음으로
