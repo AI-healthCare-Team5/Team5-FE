@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useNavigate } from "react-router";
 import { isMockApi } from "@/api/client";
 import { ScreenIcon } from "@/components/ScreenElements";
@@ -48,6 +49,9 @@ export function GuardianPage() {
   const missing = missingGuardianFields(form);
   const fieldErrors = result?.kind === "invalid" ? result.fieldErrors : {};
   const message = resultMessage(result);
+  const relationGroupRef = useRef<HTMLDivElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const consentRef = useRef<HTMLInputElement>(null);
 
   // 고친 칸의 서버 안내만 지웁니다.
   function edit(field: GuardianField, patch: Partial<GuardianForm>) {
@@ -77,7 +81,22 @@ export function GuardianPage() {
       goToLogin();
       return;
     }
-    setResult(next);
+    // 칸 안내가 그려진 뒤에 포커스를 옮겨야 aria-describedby로 이어진 안내를 함께 읽습니다.
+    flushSync(() => setResult(next));
+    if (next.kind === "invalid") {
+      focusFirstError(next.fieldErrors);
+    }
+  }
+
+  // 서버가 칸 오류만 알려 주면 위쪽 안내(role="alert")가 없어서, 첫 오류 칸으로 포커스를 옮겨 안내를 읽게 합니다.
+  function focusFirstError(errors: Partial<Record<GuardianField, string>>) {
+    if (errors.relation) {
+      relationGroupRef.current?.querySelector("button")?.focus();
+    } else if (errors.phoneNumber) {
+      phoneRef.current?.focus();
+    } else if (errors.consentAgreed) {
+      consentRef.current?.focus();
+    }
   }
 
   function save() {
@@ -107,6 +126,7 @@ export function GuardianPage() {
           누구인가요?
         </h2>
         <div
+          ref={relationGroupRef}
           role="group"
           aria-labelledby="guardian-relation"
           aria-describedby={
@@ -134,6 +154,7 @@ export function GuardianPage() {
           전화번호
         </label>
         <input
+          ref={phoneRef}
           id="guardian-phone"
           type="tel"
           inputMode="numeric"
@@ -160,12 +181,14 @@ export function GuardianPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-start gap-3 rounded-[16px] border border-line bg-surface p-4">
           <input
+            ref={consentRef}
             id="guardian-consent"
             type="checkbox"
             checked={form.consentAgreed}
             onChange={(event) =>
               edit("consentAgreed", { consentAgreed: event.target.checked })
             }
+            aria-invalid={fieldErrors.consentAgreed ? true : undefined}
             aria-describedby={
               fieldErrors.consentAgreed ? "guardian-consent-error" : undefined
             }
@@ -193,8 +216,8 @@ export function GuardianPage() {
         <span className="flex items-start gap-3">
           <ScreenIcon name="shield" size={22} />
           <span>
-            저장 위치와 보관 방식은 확정되는 대로 안내해요. 내 정보에서 지울 수
-            있어요.
+            {/* "내 정보에서 지울 수 있어요"는 P01 지우기(#32)를 붙일 때 다시 넣습니다. */}
+            저장 위치와 보관 방식은 확정되는 대로 안내해요.
           </span>
         </span>
       </Notice>
@@ -204,11 +227,20 @@ export function GuardianPage() {
         </div>
       )}
       <div className="flex flex-col gap-3">
-        <Button disabled={missing.length > 0} onClick={save}>
+        <Button
+          disabled={missing.length > 0}
+          aria-describedby={
+            missing.length > 0 ? "guardian-save-hint" : undefined
+          }
+          onClick={save}
+        >
           저장하기
         </Button>
         {missing.length > 0 && (
-          <p className="text-center text-[0.889rem] text-muted">
+          <p
+            id="guardian-save-hint"
+            className="text-center text-[0.889rem] text-muted"
+          >
             {missingGuardianMessage(missing)}
           </p>
         )}

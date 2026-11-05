@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
+import { appActions } from "@/stores/appStore";
 
 const fontSizes = [18, 22, 26] as const;
 const fontLabels = ["보통", "크게", "더 크게"];
@@ -10,6 +11,8 @@ const hiddenEmergencyBarPaths = new Set([
   "/hospital-empty",
   "/hospital-error",
 ]);
+// 입력 중인 보호자 연락처(E03)를 남겨 두는 경로입니다. 동의 내용(C01)을 보고 돌아와도 이어서 쓸 수 있게 합니다.
+const guardianDraftPaths = new Set(["/guardian", "/guardian-consent"]);
 
 function readFontSize(): number {
   try {
@@ -31,6 +34,11 @@ export function AppShell() {
       // 저장소가 차단되어도 현재 화면에서는 선택한 글자 크기를 유지합니다.
     }
   }, [fontSize]);
+  useEffect(() => {
+    if (!guardianDraftPaths.has(pathname)) {
+      appActions.clearGuardianDraft();
+    }
+  }, [pathname]);
   useEffect(() => {
     window.scrollTo(0, 0);
     const heading = document.querySelector<HTMLElement>("main h1");

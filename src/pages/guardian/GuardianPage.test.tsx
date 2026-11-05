@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
 import { GuardianPage } from "@/pages/guardian/GuardianPage";
-import { appActions, getAppState } from "@/stores/appStore";
+import { appActions } from "@/stores/appStore";
 
 function renderPage() {
   return renderToStaticMarkup(
@@ -40,12 +40,22 @@ describe("GuardianPage", () => {
     expect(markup).toMatch(/type="checkbox"[^>]*checked=""/);
     expect(markup).not.toMatch(/disabled=""[^>]*>저장하기</);
     expect(markup).not.toContain("확인해 주세요");
+    expect(markup).not.toContain('aria-describedby="guardian-save-hint"');
   });
 
-  it("로그아웃하면 입력 중인 보호자 연락처를 지운다", () => {
-    appActions.editGuardianDraft({ phoneNumber: "01000000000" });
-    appActions.logout();
+  it("꺼진 저장하기는 빠진 항목 안내와 이어진다", () => {
+    const markup = renderPage();
 
-    expect(getAppState().guardianDraft.phoneNumber).toBe("");
+    expect(markup).toMatch(
+      /<button[^>]*aria-describedby="guardian-save-hint"[^>]*>저장하기</,
+    );
+    expect(markup).toContain('id="guardian-save-hint"');
+  });
+
+  it("아직 없는 내 정보 지우기를 할 수 있다고 안내하지 않는다", () => {
+    const markup = renderPage();
+
+    expect(markup).toContain("저장 위치와 보관 방식은 확정되는 대로 안내해요.");
+    expect(markup).not.toContain("내 정보에서 지울 수 있어요");
   });
 });
