@@ -1,7 +1,9 @@
 import { apiRequest, isMockApi } from "@/api/client";
 import type {
+  AgeGroup,
   AnswerType,
   BodyPart,
+  Gender,
   InputMode,
   IntakeStage,
   IntakeStatus,
@@ -9,7 +11,10 @@ import type {
   RedFlagCategory,
 } from "@/api/enums";
 import { getIntakeConflictStatus, isApiError } from "@/api/errors";
+import type { Guardian } from "@/api/guardians";
 import * as mock from "@/api/mockApi";
+import type { HealthInfoItem } from "@/api/summaries";
+import type { CollectedList, IsoDateTime } from "@/api/types";
 
 export interface IntakeStartRequest {
   inputMode: InputMode;
@@ -226,4 +231,38 @@ export async function getIntakeDepartment(
       signal,
     },
   );
+}
+
+// 응급 전환된 문진의 응급 카드(E02)입니다. 못 물은 항목은 null("확인 못 했어요")입니다.
+// 복용약·앓는 병·알레르기는 AI 없이 사용자가 한 말을 그대로 한 항목으로 줍니다.
+// 현재 위치 주소는 응답에 없고, 화면이 카카오맵 SDK로 바꿉니다.
+export interface EmergencyCard {
+  intakeId: string;
+  // 카드 머리의 "10:52 작성"입니다.
+  createdAt: IsoDateTime;
+  userUtterance: string | null;
+  redFlagCategory: RedFlagCategory | null;
+  mainSymptom: string | null;
+  onsetDetail: string | null;
+  ageGroup: AgeGroup | null;
+  gender: Gender | null;
+  medications: CollectedList<HealthInfoItem>;
+  conditions: CollectedList<HealthInfoItem>;
+  allergies: CollectedList<HealthInfoItem>;
+  // 로그인했고 등록된 경우에만 전체 번호로 주고, 아니면 null입니다.
+  guardian: Guardian | null;
+}
+
+// SUMMARY_403·404는 문진이 없거나 내 것이 아니고(처음으로), SUMMARY_409는 응급 전환되지 않은 문진입니다.
+export async function getEmergencyCard(
+  intakeId: string,
+  signal?: AbortSignal,
+): Promise<EmergencyCard> {
+  if (isMockApi) {
+    signal?.throwIfAborted();
+    return mock.getEmergencyCard(intakeId);
+  }
+  return apiRequest<EmergencyCard>(intakePath(intakeId, "/emergency-card"), {
+    signal,
+  });
 }

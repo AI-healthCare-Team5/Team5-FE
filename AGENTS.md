@@ -68,7 +68,7 @@
 | S06a        | 요약지 만드는 중                | `/summary-loading`                         | 구현                                                           |
 | S06         | 요약지                          | `/summary`                                 | 구현, 요약지 API 연결 (#26), 보관 연결 (#29, 실제 경로는 숨김) |
 | E01         | 응급 전환                       | `/emergency`                               | 구현                                                           |
-| E02         | 응급 카드                       | `/emergency-card`                          | 미구현 (#30)                                                   |
+| E02         | 응급 카드                       | `/emergency-card`                          | 구현                                                           |
 | E03         | 보호자 연락처 등록              | `/guardian`                                | 미구현 (#31)                                                   |
 | C01         | 보호자 저장 동의                | `/guardian-consent?from=guardian\|my-info` | 구현                                                           |
 | P01         | 내 정보                         | `/my-info`                                 | 계정 영역만 구현 (본문 #32)                                    |

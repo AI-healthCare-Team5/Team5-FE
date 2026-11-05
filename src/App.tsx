@@ -13,6 +13,7 @@ import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
 import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 import { SummaryPage } from "@/pages/summary/SummaryPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
+import { EmergencyCardPage } from "@/pages/emergency-card/EmergencyCardPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
 import { LoginPage } from "@/pages/login/LoginPage";
 import { KakaoCallbackPage } from "@/pages/kakao-callback/KakaoCallbackPage";
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
       { path: "/summary", element: <SummaryPage /> },
       { path: "/emergency", element: <EmergencyPage /> },
+      { path: "/emergency-card", element: <EmergencyCardPage /> },
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/login/failed", element: <LoginPage failed /> },
