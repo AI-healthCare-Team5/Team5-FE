@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { HospitalCard } from "@/pages/hospitals/components/HospitalCard";
-import type { Hospital } from "@/pages/hospitals/types";
+import type { Hospital } from "@/api/hospitals";
 
 const now = new Date("2026-11-04T15:00:00+09:00");
 

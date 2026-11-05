@@ -3,12 +3,15 @@ import { Link } from "react-router";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { ActionLink, Button, Card } from "@/components/ui";
 import { ScreenIcon } from "@/components/ScreenElements";
+import { WITHDRAW_CONFIRM_MESSAGE } from "@/pages/my-info/withdrawConfirm";
 
 export interface AccountCardProps {
   loggedIn: boolean;
   nickname?: string;
   recordConsent: boolean;
   recordCount: number;
+  // 로그아웃·탈퇴 요청이 진행 중이면 버튼을 잠가 이중 전송을 막습니다.
+  busy?: boolean;
   onLogout: () => void;
   onWithdraw: () => void;
 }
@@ -18,6 +21,7 @@ export function AccountCard({
   nickname,
   recordConsent,
   recordCount,
+  busy = false,
   onLogout,
   onWithdraw,
 }: AccountCardProps) {
@@ -69,15 +73,20 @@ export function AccountCard({
               기록 동의 내용 보기
             </Link>
           </div>
-          <Button variant="neutral" onClick={onLogout}>
+          <Button variant="neutral" disabled={busy} onClick={onLogout}>
             로그아웃
           </Button>
-          <Button variant="quiet" onClick={() => setConfirming(true)}>
+          <Button
+            variant="quiet"
+            disabled={busy}
+            onClick={() => setConfirming(true)}
+          >
             탈퇴하고 기록 모두 지우기
           </Button>
           {confirming && (
             <InlineConfirm
-              message="탈퇴하고 기록을 모두 지울까요? 기록 저장 동의도 함께 거두어져요."
+              message={WITHDRAW_CONFIRM_MESSAGE}
+              busy={busy}
               onCancel={() => setConfirming(false)}
               onConfirm={onWithdraw}
             />

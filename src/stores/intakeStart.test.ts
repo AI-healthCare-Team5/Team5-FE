@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { bodyParts, onsets } from "@/api/enums";
 import { appActions, getAppState } from "@/stores/appStore";
+import { beginIntakeSession, readIntakeSession } from "@/stores/intakeSession";
 import {
   bodyPartOptions,
   createButtonIntakeRequest,
   type IntakeStartRequest,
   onsetOptions,
 } from "@/stores/intakeStart";
+import {
+  readSummarySession,
+  saveSummarySession,
+} from "@/stores/summarySession";
 
 describe("createButtonIntakeRequest", () => {
   it("화면 선택 값을 enum으로 바꿔 버튼 입력 요청을 만든다", () => {
@@ -52,21 +57,33 @@ describe("createButtonIntakeRequest", () => {
   });
 });
 
-describe("문진 시작 요청 상태", () => {
-  it("다음을 누르면 저장하고, 문진을 처음부터 시작하면 지운다", () => {
-    appActions.prepareIntake({
-      inputMode: "BUTTON",
-      bodyPart: "HEAD",
-      onset: "TODAY",
+describe("문진을 처음부터 시작하면", () => {
+  it("기억한 문진과 요약지 ID, 요약지 보관 여부, 입력한 답을 지운다", () => {
+    appActions.answer("symptom", "머리");
+    beginIntakeSession({
+      intakeId: "intake-1",
+      status: "IN_PROGRESS",
+      stage: "BASIC_INFO",
+      progress: { current: 1, total: 5 },
+      collected: [],
+      question: {
+        questionId: "q_age_group",
+        text: "연세가 어떻게 되세요?",
+        answerType: "SINGLE_CHOICE",
+        options: [{ code: "SIXTIES", label: "60대" }],
+      },
+      reask: false,
+      emergency: null,
+      department: null,
+      summaryId: null,
     });
-    expect(getAppState().intakeStart).toEqual({
-      inputMode: "BUTTON",
-      bodyPart: "HEAD",
-      onset: "TODAY",
-    });
+    saveSummarySession({ intakeId: "intake-1", summaryId: "summary-1" });
 
     appActions.startInterview();
-    expect(getAppState().intakeStart).toBeNull();
+
+    expect(readIntakeSession()).toBeNull();
+    expect(readSummarySession()).toBeNull();
+    expect(getAppState().interview).toEqual({});
     expect(getAppState().summarySaved).toBe(false);
   });
 

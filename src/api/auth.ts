@@ -1,4 +1,5 @@
 import { apiRequest, isMockApi } from "@/api/client";
+import * as mock from "@/api/mockApi";
 
 // 카카오가 인가 코드를 돌려보낼 프론트 콜백 경로입니다. 서버 허용 목록과 카카오 앱에 같은 주소를 등록합니다.
 export const KAKAO_CALLBACK_PATH = "/auth/kakao/callback";
@@ -46,16 +47,20 @@ export async function getKakaoAuthorizeUrl(
 export async function loginWithKakao(
   request: KakaoLoginRequest,
 ): Promise<KakaoLoginResult> {
-  if (isMockApi) {
-    return {
-      memberId: 1,
-      nickname: "봄날",
-      isNewMember: true,
-      needsRecordConsent: true,
-    };
-  }
+  if (isMockApi) return mock.loginMember();
   return apiRequest<KakaoLoginResult>("/auth/kakao/login", {
     method: "POST",
     body: request,
   });
+}
+
+// 로그아웃합니다(P01). 토큰 상태와 상관없이 항상 성공하고, 서버가 쿠키와 이 브라우저의 문진·요약지를 지웁니다.
+// 요청이 실패하면 쿠키가 남아 있을 수 있으므로 화면은 로그아웃된 것으로 보여 주지 않습니다.
+export async function logout(signal?: AbortSignal): Promise<void> {
+  if (isMockApi) {
+    signal?.throwIfAborted();
+    mock.logoutMember();
+    return;
+  }
+  await apiRequest<null>("/auth/logout", { method: "POST", signal });
 }

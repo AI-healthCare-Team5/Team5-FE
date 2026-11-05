@@ -1,30 +1,28 @@
 # 진료한장
 
-## M1 화면 구현 상태
+말로 증상을 설명하면 진료과·병원 안내와 의사에게 보여줄 요약지까지 만들어 주는 진료 준비 도우미의 프론트엔드입니다. 진단이 아닌 진료 준비를 돕는 서비스이며, 모바일(390) 레이아웃 하나로 만드는 웹앱입니다. Vite, React, TypeScript, Tailwind CSS를 사용합니다.
 
-현재는 API 없이 화면을 확인하는 단계입니다. 카카오 로그인 버튼은 예시 로그인 상태로 전환하며 실제 인증·마이크·위치 권한·지도 SDK·병원 API를 호출하지 않습니다. 진료과와 병원 지도는 가짜 데이터와 예시 표시입니다. 문진·로그인·기록 데이터는 메모리에만 유지되며 새로고침하면 초기화됩니다. 글자 크기만 로컬 저장소에 저장합니다.
+## 구현 상태 (2026-11-05 기준)
 
-문진은 답변이 없는 상태에서 시작합니다. 응급 안내에는 실제 사용할 수 있는 119 전화만 표시하고, 미구현 응급실·응급 카드 이동은 숨깁니다. 병원 오류의 검색 재시도·요약지 버튼은 대상 화면 연결 전까지 비활성 상태입니다. 요약지 로딩은 스피너를 표시하며 완료 신호 없이 다른 화면으로 이동하지 않습니다. 로그인 화면은 기존 공식 버튼 이미지로 표시하되 실제 소셜 인증은 수행하지 않습니다.
+화면 ID와 경로, 담당 이슈는 [`AGENTS.md`](./AGENTS.md)의 "화면과 경로" 표를 기준으로 합니다.
 
-- 시작: `/`, 마이크 안내: `/mic-guide`, 사용 불가: `/mic-guide/unavailable`
-- 7문항 문진: `/interview`, 위치 안내: `/location`
-- 병원 없음: `/hospital-empty`, 병원 오류: `/hospital-error`
-- 요약지 로딩: `/summary-loading`, 응급 안내: `/emergency`
-- 보호자 동의: `/guardian-consent?from=guardian` 또는 `?from=my-info`
-- 로그인: `/login`, 실패: `/login/failed`, 기록 동의: `/record-consent`
-- 내 기록: `/records`, 기록 상세: `/records/:id`, 내 계정: `/my-info`
+- 연결된 API: 카카오 로그인(인가 URL 발급, 인가 코드 교환)과 토큰 재발급, 문진 시작·답변·이전·취소(S04, S04a, S03), 음성 인식(`POST /api/stt`, S03), 진료과·병원 검색(S05), 요약지 조회·재생성·수정·확정(S06a, S06), 가까운 응급실(E01), 내 정보·로그아웃·탈퇴, 기록 저장 동의(C02), 요약지 보관(S06), 내 기록 목록·상세·삭제(H01, H02), 보호자 등록·삭제(`saveGuardian`, `deleteGuardian`, 화면은 #31·#32). `src/api/client.ts`의 공통 요청 함수와 `src/api/` 아래 도메인 파일을 사용합니다.
+- 카카오맵: `VITE_KAKAO_MAP_APP_KEY`가 있으면 SDK 지도를, 없거나 로드에 실패하면 예시 지도를 표시합니다.
+- 가짜 데이터: 문진·진료과·병원·요약지 가짜 응답과 예시 기록은 `VITE_API_MOCK=true`일 때만 쓰고, 빌드 결과물에는 들어가지 않습니다. 가짜 응답은 로그인 상태, 동의, 보호자, 예시 기록 3건도 흉내 내며 새로고침하면 사라집니다. 요약지 화면의 "내 기록에 보관" 카드는 mock에서만 보이고, 실제 경로에서는 백엔드가 기록 저장 API를 구현하기 전까지 숨깁니다(백엔드 develop 061842f의 `POST /summaries/{id}/save`, `GET /members/me`, `GET /members/me/summaries`, `POST /consents`는 아직 `NOT_IMPLEMENTED`입니다). 백엔드 구현이 배포되고 실제로 확인되면 `SummaryStorage`의 `isMockApi` 조건을 지웁니다. 보관에 성공하면 서버가 문진·요약지를 지우므로, S06을 기록 상세(H02, `/records/{medicalRecordId}`)로 대체해 이동합니다. 문진·로그인 상태는 메모리에만 있어 새로고침하면 초기화되고, 응급 전환 정보와 현재 위치도 메모리에만 두며 로그아웃·탈퇴하면 함께 지웁니다(로그인이 풀린 경우에는 지우지 않습니다). 내 기록·기록 상세·내 정보 화면은 열릴 때 `GET /members/me`로 로그인이 남아 있는지 서버에 확인합니다. 기록과 보호자는 서버에만 있고 프론트에 사본을 두지 않습니다. 글자 크기는 로컬 저장소, 문진·요약지 ID와 카카오 로그인 복귀 정보는 sessionStorage에 저장합니다.
+- 미연결: 지역 선택(S05b, `getRegions`, #33). 응급 카드 조회(`GET /intakes/{intakeId}/emergency-card`)와 그 안의 guardian은 E02(#30)에서 연결합니다. `Guardian` 타입은 `src/api/guardians.ts`에 있습니다. 보호자 화면의 후속 연결: E03(#31)은 `saveGuardianContact`로 저장하고 `GUARDIAN_400`의 `fieldErrors`로 칸별 안내를 합니다. P01 본문(#32)은 `loadMember` 뒤 `useAppStore()`의 `guardian`·`guardianConsent`를 읽고 `removeGuardianContact`로 지웁니다. E02(#30)는 응급 카드 응답의 `guardian`(`Guardian | null`, 로그인했고 등록된 경우에만 전체 번호)을 쓰고, P01의 "응급 카드 미리 보기"는 store의 `guardian`을 씁니다.
+- 음성 문진(S03) 확인 전: 백엔드 `/api/stt`가 아직 명세 단계(`COMMON_501`)일 수 있어 실제 응답으로는 확인하지 못했습니다. 음성이 서버에서 저장되는지, 외부 AI 음성 인식 서비스로 전송되는지는 프론트에서 알 수 없고 백엔드 확인 전입니다. 프론트는 오디오를 브라우저 저장소에 쓰지 않고 STT 요청에만 올립니다. 마이크 녹음은 실기기에서 확인하지 못했습니다.
+- 미구현 경로: `/region`(#33), `/emergency-card`(#30), `/guardian`(#31). 현재는 404로 처리하며, 해당 화면으로 가는 버튼은 화면이 합쳐질 때까지 비활성이거나 숨겨져 있습니다. 위치 권한을 막은 사용자는 `/region`이 생기기 전까지 이어갈 경로가 없습니다. `/my-info`는 계정 영역만 있어 #32 본문을 추가해야 합니다.
 
-실패·빈 결과·응급 화면은 해당 URL로 직접 검토합니다. 로그인 후 동의하면 예시 기록 3건을 볼 수 있습니다. 문진은 버튼 선택 후 다음 질문으로 이동하며 이전 답변을 유지합니다. 마지막 기록을 지우면 기록 저장 동의도 해제합니다.
+글 입력 경로(S04 → S04a → S05 → S06a → S06)와 음성 경로(S03 → S05 → S06a → S06)는 끝까지 이어집니다. 음성 경로는 말한 내용을 `POST /api/stt`로 글자로 바꿔 같은 문진 API에 `inputMode=VOICE`로 보내고, 선택지는 `BUTTON`으로 보냅니다. 문진이 끝나면 "병원 안내 보기"로 위치 확인을 거쳐 병원 안내로 갑니다. 문진을 시작하기 전에 마이크를 쓸 수 없으면 S02a로 가고, 문진 중이면 S03에 머물러 답을 지키며 "글로 입력하기"가 현재 질문부터 S04a로 이어집니다. 음성 인식이 연속으로 실패해도 같은 방식으로 "글로 입력하기"를 강조합니다. 가짜 응답(`VITE_API_MOCK=true`)에서도 녹음은 실제 마이크로 하고, 인식 결과만 `mockApi.ts`의 가짜 문장을 순서대로 돌려줍니다. 문진은 답변이 없는 상태에서 시작합니다. S03·S04 시작이나 S03·S04a 답변에서 서버가 응급(EMERGENCY)으로 응답하면 문진을 멈추고 응급 안내(E01)로 갑니다. E01은 들어오자마자 위치 권한 창을 띄우지 않습니다. 이미 받은 위치나 이미 허용된 권한이 있을 때만 가까운 응급실 2곳을 바로 보여 주고, 그 밖에는 "가까운 응급실 찾기"를 눌러야 위치를 묻습니다. 거부하거나 찾지 못하면 119 안내만 남깁니다. 응급 카드(E02, #30) 이동은 화면이 생기기 전까지 숨깁니다. 가짜 응답에서는 "더 알려주실 내용"이나 글로 한 답에 "가슴이 답답"을 넣으면 응급 전환을 볼 수 있습니다(서버의 위험 신호 규칙과는 다릅니다). 실패·빈 결과·응급 화면은 해당 URL로 직접 검토합니다. 백엔드 없이 화면을 보려면 `.env.local`에 `VITE_API_MOCK=true`를 둡니다.
 
 ### 다른 담당자와 연결할 부분
 
-`/text-input`(#22), `/region`(#33), `/hospitals`(#24), `/summary`(#25), `/emergency-card`(#30), `/guardian`(#31)는 담당 화면이 합쳐질 때 `src/App.tsx`에 추가해야 합니다. 현재 해당 경로는 404로 처리하며 M1 작업에서 임의 화면을 만들지 않았습니다. `/my-info`는 계정 영역만 구현되어 있으므로 #32 본문을 추가해야 합니다. 따라서 전체 문진→병원→요약지 통합 흐름은 아직 완성되지 않았습니다.
-
-- `HospitalMap`: `hospitals: MapHospital[]`, `selectedHospitalId`, `onSelectHospital(id)`로 목록과 선택을 공유합니다. 좌표는 `latitude`, `longitude`이며 SDK 교체 전 예시 지도입니다.
-- `SummaryDocument`: `summary: SummaryData`를 받아 9개 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
-- `SummaryStorage`: `loggedIn`, `saved`, `onLogin`, `onSave`를 전달합니다. 저장이 확인된 경우에만 `saved=true`를 전달합니다. 로그인 전 `appActions.prepareLogin("/summary")`를 호출하면 동의 후 복귀합니다.
-- `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `onLogout`, `onWithdraw`를 전달합니다.
-- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`와 `SummaryData`는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다.
+- `HospitalMap`: `hospitals: MapHospital[]`, `selectedHospitalId`, `onSelectHospital(id)`로 목록과 선택을 공유합니다. 좌표는 `latitude`, `longitude`입니다.
+- `SummaryDocument`: 서버 요약지(`SummaryContent`, `src/api/summaries.ts`)를 받아 항목을 읽기 전용으로 표시합니다. #25에서 동일한 타입을 사용하고 편집 UI는 별도로 연결합니다.
+- `SummaryStorage`: `loggedIn`, `saved`, `saving`, `message`, `onLogin`, `onSave`를 전달합니다. 서버가 보관했다고 알린 경우(`saveCurrentSummary`가 `saved`를 돌려준 경우)에만 `saved=true`를 전달합니다. 로그인 전 `appActions.prepareLogin("/summary", saveTarget)`을 호출하면 동의 후 복귀해 자동으로 보관합니다. 실제 경로에서는 백엔드가 구현하기 전까지 카드를 그리지 않습니다.
+- 회원·보호자: `src/stores/memberSession.ts`의 `saveGuardianContact`(E03, `GUARDIAN_400`의 칸별 이유 포함)와 `removeGuardianContact`(P01, E02)는 서버가 성공을 알린 뒤에 `useAppStore()`의 `guardian`·`guardianConsent`를 바꿉니다. 내 정보(`loadMember`)를 불러오면 `recordConsent`, `guardian`, `guardianConsent`, `recordCount`가 채워집니다. 보호자 전화번호는 서버가 가운데를 가려 줍니다.
+- `AccountCard`: `loggedIn`, `nickname`, `recordConsent`, `recordCount`, `busy`, `onLogout`, `onWithdraw`를 전달합니다. 탈퇴 확인 문구는 `withdrawConfirm.ts`에 있고, 내 정보를 불러오지 못했을 때도 `MyInfoPage`가 로그아웃 버튼을 따로 보여 줍니다.
+- 상태: `useAppStore()`와 `appActions.answer(key, value)`를 사용합니다. `Interview`는 S04가 고른 값을 담는 프론트 화면용 타입이며 백엔드 응답 계약이 아닙니다. 요약지와 내 기록 상세는 `SummaryContent`와 `SummaryDocument`를 그대로 씁니다. 진행 중인 문진은 `src/stores/intakeSession.ts`, 요약지 ID는 `src/stores/summarySession.ts`가 기억합니다. 서버 값은 `src/api/enums.ts`의 enum과 `src/api/values.ts`의 표시 함수를 사용합니다.
 
 ### 공통 UI 사용 예시
 
@@ -57,9 +55,7 @@ import {
 
 카카오 버튼 출처: [공식 리소스](https://developers.kakao.com/tool/resource/login). PWA 아이콘은 저장소의 SVG 원본에서 PNG로 내보낸 파일이며 manifest에는 192/512 및 maskable 변형을 등록했습니다. 서비스 워커와 오프라인 캐시는 추가하지 않았습니다. iOS 홈 화면 설치·실기기 검증은 별도로 필요합니다.
 
-이슈별 브랜치는 선행 브랜치를 기반으로 순서대로 쌓여 있습니다. PR의 base는 바로 앞 선행 브랜치로 지정하여 변경을 분리합니다. 병합은 공통 기반부터 진행하고, 선행 PR 병합 후 다음 PR base를 main으로 변경합니다. 부분 구현과 연동 보류 이슈는 `Refs`로 연결하며 자동 종료하지 않습니다. `docs/`는 로컬 참고 자료이므로 커밋·push하지 않습니다.
-
-Vite, React, TypeScript, Tailwind CSS를 사용하는 프론트엔드 프로젝트입니다.
+선행 브랜치에 의존하는 작업은 선행 브랜치에서 새 브랜치를 만들고, PR의 base를 바로 앞 선행 브랜치로 지정합니다. 선행 PR이 병합되면 다음 PR의 base를 main으로 바꿉니다. 부분 구현과 연동 보류 이슈는 `Refs`로 연결하며 자동 종료하지 않습니다. `docs/`는 로컬 참고 자료이므로 커밋·push하지 않습니다.
 
 ## 개발 환경
 
@@ -98,6 +94,7 @@ Windows PowerShell에서 npm.ps1 실행 정책 오류가 나면 `npm.cmd ci`, `n
 - `public`: favicon 등 정적 파일
 - `worker`: Cloudflare Worker 진입점 (`/api/*` 프록시)
 - `.github`: 이슈 및 PR 템플릿과 CI 워크플로
+- `src/stores`: 앱 상태(`appStore`), 화면용 모델, 카카오 로그인 복귀 처리
 - `.kiro/steering`: Kiro 전용 보조 지침
 
 `src` 내부 파일은 `@/components/Button`처럼 `@/` 별칭으로 import합니다.
@@ -113,6 +110,8 @@ Windows PowerShell에서 npm.ps1 실행 정책 오류가 나면 `npm.cmd ci`, `n
 | 공용 | `AGENTS.md`, `CLAUDE.md`, `.kiro/steering/`      | 팀 공통 지침                                                 |
 | 공용 | `.claude/settings.json`                          | 허용 명령, `.env` 읽기 차단, 파일 수정 후 Prettier 자동 실행 |
 | 공용 | `.claude/skills/issue-to-pr/`                    | 이슈에서 PR까지 협업 절차                                    |
+| 공용 | `.claude/skills/screen-impl/`                    | 화면 구현 순서와 완료 기준, 화면별 디자인 결정(`screens.md`) |
+| 공용 | `.agents/skills/`, `.codex/`                     | Codex용 스킬 사본과 Prettier 훅. `.claude/skills`와 맞춥니다 |
 | 개인 | `.claude/settings.local.json`, `CLAUDE.local.md` | 이 저장소에서만 쓰는 개인 설정 (gitignore)                   |
 | 개인 | `~/.claude/`, `~/.kiro/`                         | 모든 프로젝트에 적용되는 개인 설정                           |
 

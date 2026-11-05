@@ -1,4 +1,9 @@
-import type { HealthInfo, SummaryContent } from "@/components/summary/types";
+import type {
+  HealthInfoItem,
+  SummaryContent,
+  SummaryItemUpdate,
+  SummaryUpdateRequest,
+} from "@/api/summaries";
 
 export const healthKeys = ["medications", "conditions", "allergies"] as const;
 export type HealthKey = (typeof healthKeys)[number];
@@ -42,7 +47,7 @@ function applyHealthEdits(
   original: SummaryContent[HealthKey],
   entries: HealthEntryEdit[],
 ): SummaryContent[HealthKey] {
-  const next: HealthInfo[] = entries
+  const next: HealthInfoItem[] = entries
     .filter((entry) => entry.name.trim() !== "")
     .map((entry) => ({
       name: entry.name.trim(),
@@ -76,6 +81,96 @@ export function applySummaryEdits(
   };
 }
 
+function sameEntries(
+  left: HealthEntryEdit[],
+  right: HealthEntryEdit[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (entry, index) =>
+        entry.name === right[index].name &&
+        entry.detail === right[index].detail,
+    )
+  );
+}
+
+function sameHealthInfo(
+  left: SummaryContent[HealthKey],
+  right: SummaryContent[HealthKey],
+): boolean {
+  // null(확인 못 했어요)과 [](없음)은 다른 값입니다.
+  if (left === null || right === null) return left === right;
+  return (
+    left.length === right.length &&
+    left.every(
+      (item, index) =>
+        item.name === right[index].name && item.detail === right[index].detail,
+    )
+  );
+}
+
+// 수정 폼의 입력에서 PATCH 요청 본문을 만듭니다. 사용자가 바꾼 칸만 담습니다.
+// - 안 바꾼 칸은 보내지 않습니다(서버는 안 보낸 필드를 그대로 둡니다).
+// - 비운 칸은 null(지움 또는 "확인 못 했어요")로 보냅니다.
+// - 건강 정보는 바꿨다면 종류별로 통째로 보내고, 모두 지우면 [](없음)입니다.
+// - 증상별 항목은 바꾼 항목만 order와 함께 보냅니다.
+// - 나이대·성별·진료과·언제부터(onset)는 폼에서 고치지 않으므로 보내지 않습니다.
+// 바뀐 칸이 없으면 빈 객체입니다.
+export function buildSummaryUpdate(
+  original: SummaryContent,
+  edits: SummaryEdits,
+): SummaryUpdateRequest {
+  const initial = initialEdits(original);
+  const applied = applySummaryEdits(original, edits);
+  const request: SummaryUpdateRequest = {};
+
+  // 입력이 달라졌더라도 공백을 다듬은 결과가 원래 값과 같으면 보내지 않습니다.
+  if (
+    edits.mainSymptom !== initial.mainSymptom &&
+    applied.mainSymptom !== original.mainSymptom
+  ) {
+    request.mainSymptom = applied.mainSymptom;
+  }
+  if (
+    edits.onsetDetail !== initial.onsetDetail &&
+    applied.onsetDetail !== original.onsetDetail
+  ) {
+    request.onsetDetail = applied.onsetDetail;
+  }
+  if (
+    edits.extraNote !== initial.extraNote &&
+    applied.extraNote !== original.extraNote
+  ) {
+    request.extraNote = applied.extraNote;
+  }
+  for (const key of healthKeys) {
+    if (
+      !sameEntries(initial.health[key], edits.health[key]) &&
+      !sameHealthInfo(applied[key], original[key])
+    ) {
+      request[key] = applied[key];
+    }
+  }
+
+  const items: SummaryItemUpdate[] = [];
+  for (const item of original.items) {
+    const appliedItem = applied.items.find(
+      (candidate) => candidate.order === item.order,
+    );
+    if (
+      edits.itemValues[item.order] !== initial.itemValues[item.order] &&
+      appliedItem &&
+      appliedItem.value !== item.value
+    ) {
+      items.push({ order: item.order, value: appliedItem.value });
+    }
+  }
+  if (items.length > 0) request.items = items;
+
+  return request;
+}
+
 // 화면용 키라서 고유하기만 하면 됩니다.
 // crypto.randomUUID는 HTTPS가 아닌 주소(휴대폰에서 연 개발 서버 등)에서는 없어서 쓰지 않습니다.
 let nextEntryId = 0;
@@ -90,7 +185,7 @@ export function initialEdits(summary: SummaryContent): SummaryEdits {
       newHealthEntry(info.name, info.detail ?? ""),
     );
   return {
-    mainSymptom: summary.mainSymptom ?? "",
+    mainSymptom: summary.mainSymptom,
     onsetDetail: summary.onsetDetail ?? "",
     itemValues: Object.fromEntries(
       summary.items.map((item) => [item.order, item.value ?? ""]),

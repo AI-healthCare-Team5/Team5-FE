@@ -1,12 +1,18 @@
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   IconList,
   Illustration,
   ScreenIcon,
 } from "@/components/ScreenElements";
+import { WarningNotice } from "@/components/WarningNotice";
+import { LOCATION_FAILED_MESSAGE } from "@/components/map/currentPosition";
 import { ActionLink, Button, PageTitle } from "@/components/ui";
+import { isLocationFailed } from "@/pages/hospitals/hospitalSearch";
 export function LocationPage() {
   const navigate = useNavigate();
+  // 병원 안내(S05)에서 위치를 얻지 못해 돌아온 경우에만 안내를 보여 줍니다.
+  const { state } = useLocation();
+  const locationFailed = isLocationFailed(state);
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -31,6 +37,9 @@ export function LocationPage() {
           },
         ]}
       />
+      {locationFailed && (
+        <WarningNotice>{LOCATION_FAILED_MESSAGE}</WarningNotice>
+      )}
       <div className="flex flex-col gap-3">
         <ActionLink to="/hospitals">
           <ScreenIcon name="pin-white" size={24} />
