@@ -28,4 +28,9 @@
     outline: 3px solid var(--color-brand);
     outline-offset: 3px;
   }
+
+  /* 화면이 바뀔 때 코드로 옮긴 제목 포커스는 스크린리더에만 알리고 테두리는 그리지 않습니다. */
+  main h1:focus-visible {
+    outline: none;
+  }
 }
