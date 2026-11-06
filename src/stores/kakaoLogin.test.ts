@@ -100,7 +100,7 @@ describe("카카오 콜백 로그인", () => {
       loginWithKakaoCallback(code, "state-1"),
     ]);
 
-    expect(results).toEqual(["/my-info", "/my-info"]);
+    expect(results).toEqual(["/record-consent", "/record-consent"]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
