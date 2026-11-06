@@ -51,7 +51,35 @@ describe("EmergencyCardPage", () => {
     expect(markup).toContain("딸 · 010-****-0000");
     expect(markup).not.toContain('href="tel:010');
     expect(markup).toContain("내 보호자 연락처");
-    expect(markup).toContain("지우기");
+    expect(markup).toMatch(/href="\/guardian"[^>]*>바꾸기</);
+    expect(markup).toMatch(/<button[^>]*>지우기</);
+  });
+
+  it("로그인했고 보호자가 없으면 등록하기가 보호자 연락처 등록(E03)으로 간다", () => {
+    appActions.applyMember({
+      memberId: 1,
+      nickname: "봄날",
+      provider: "KAKAO",
+      consents: {
+        record: { agreed: true, policyVersion: "v1", agreedAt: "2026-11-04" },
+        guardian: { agreed: false, policyVersion: null, agreedAt: null },
+      },
+      recordCount: 0,
+      guardian: null,
+    });
+
+    const markup = renderPage();
+
+    expect(markup).toMatch(/href="\/guardian"[^>]*>등록하기</);
+    expect(markup).not.toContain("바꾸기");
+    expect(markup).not.toContain("지우기");
+  });
+
+  it("로그인하지 않았으면 등록하기는 링크가 아니라 로그인 안내 버튼이다", () => {
+    const markup = renderPage();
+
+    expect(markup).toMatch(/<button[^>]*>등록하기</);
+    expect(markup).not.toContain('href="/guardian"');
   });
 
   it("응급 전환으로 들어오면 불러오는 동안 항목을 그리지 않는다", () => {

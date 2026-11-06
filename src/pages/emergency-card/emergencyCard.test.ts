@@ -3,6 +3,7 @@ import { ApiError, NETWORK_ERROR, SERVER_ERROR_MESSAGE } from "@/api/errors";
 import { getEmergencyCard, type EmergencyCard } from "@/api/intakes";
 import {
   buildEmergencyCardRows,
+  cardAddress,
   formatCardTime,
   formatGuardian,
   guardianTelHref,
@@ -85,6 +86,27 @@ describe("buildEmergencyCardRows", () => {
     expect(
       valueOf(buildEmergencyCardRows(card, null), "location"),
     ).toMatchObject({ value: "확인 못 했어요", unchecked: true });
+  });
+});
+
+describe("cardAddress", () => {
+  const here = { latitude: 37.697, longitude: 127.889 };
+  const found = { location: here, address: "강원 홍천군 OO읍" };
+
+  it("응급 전환된 문진이면 지금 위치로 구한 주소를 쓴다", () => {
+    expect(cardAddress(card.intakeId, here, found)).toBe("강원 홍천군 OO읍");
+  });
+
+  it("미리 보기(문진 없음)에는 위치를 알아도 주소를 채우지 않는다", () => {
+    expect(cardAddress(null, here, found)).toBeNull();
+  });
+
+  it("위치가 없거나 바뀌었으면 이전 주소를 쓰지 않는다", () => {
+    expect(cardAddress(card.intakeId, null, found)).toBeNull();
+    expect(
+      cardAddress(card.intakeId, { latitude: 37.88, longitude: 127.73 }, found),
+    ).toBeNull();
+    expect(cardAddress(card.intakeId, here, null)).toBeNull();
   });
 });
 

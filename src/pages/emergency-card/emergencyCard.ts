@@ -7,11 +7,13 @@ import {
 } from "@/api/errors";
 import type { Guardian } from "@/api/guardians";
 import { getEmergencyCard, type EmergencyCard } from "@/api/intakes";
+import type { MapLocation } from "@/components/map/types";
 import { formatCollectedValue, UNCHECKED_TEXT } from "@/api/values";
 import {
   formatAgeGender,
   formatHealthInfo,
 } from "@/components/summary/summaryRows";
+import { relationOptions } from "@/stores/guardianForm";
 
 export interface EmergencyCardRow {
   key: string;
@@ -21,12 +23,10 @@ export interface EmergencyCardRow {
   unchecked: boolean;
 }
 
-const relationLabels: Record<Relation, string> = {
-  SPOUSE: "배우자",
-  SON: "아들",
-  DAUGHTER: "딸",
-  ETC: "가족 · 지인",
-};
+// 관계 문구는 E03 선택지(relationOptions)와 같은 것을 씁니다.
+const relationLabels = Object.fromEntries(
+  relationOptions.map(({ value, label }) => [value, label]),
+) as Record<Relation, string>;
 
 // 응급 카드 항목 순서: 주된 증상 / 시작 시점 / 나이 · 성별 / 복용약 / 앓는 병 / 알레르기 / 현재 위치
 // 보호자 연락처는 전화 버튼이 있어 따로 그립니다.
@@ -76,6 +76,17 @@ export function buildEmergencyCardRows(
     ...row,
     unchecked: row.value === UNCHECKED_TEXT,
   }));
+}
+
+// 카드의 현재 위치 주소입니다. 미리 보기(문진 없음)에는 위치를 채우지 않습니다(이슈 #30).
+// 주소는 지금 위치로 구한 것일 때만 씁니다. 위치가 바뀌면 이전 주소를 보여 주지 않습니다.
+export function cardAddress(
+  intakeId: string | null,
+  location: MapLocation | null,
+  found: { location: MapLocation; address: string | null } | null,
+): string | null {
+  if (!intakeId || !location || found?.location !== location) return null;
+  return found.address;
 }
 
 // "딸 · 010-0000-0000"
