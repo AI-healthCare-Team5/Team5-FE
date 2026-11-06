@@ -30,6 +30,7 @@ import type {
 } from "@/api/hospitals";
 import type {
   DepartmentRecommendation,
+  EmergencyCard,
   IntakeAnswerRequest,
   IntakeCancelResult,
   IntakeDepartmentResult,
@@ -742,6 +743,43 @@ export function getIntakeDepartment(intakeId: string): IntakeDepartmentResult {
   return { intakeId, ...mockDepartment };
 }
 
+// 응급 카드입니다. 서버는 응급 전환 시각을 주지만 가짜 응답은 조회한 시각을 씁니다.
+// 보호자는 로그인했고 등록된 경우에만 하이픈을 넣은 전체 번호로 줍니다.
+export function getEmergencyCard(intakeId: string): EmergencyCard {
+  const intake = intakes.get(intakeId);
+  if (!intake) {
+    throw new ApiError("SUMMARY_404", "문진을 찾을 수 없어요.", 404);
+  }
+  if (!intake.emergency) {
+    throw new ApiError("SUMMARY_409", "응급 전환된 문진이 아니에요.", 409);
+  }
+  const codeOf = (questionId: string) =>
+    intake.answers.find((answer) => answer.questionId === questionId)?.code;
+  const ageGroup = codeOf("q_age_group");
+  const gender = codeOf("q_gender");
+  const guardian =
+    member.loggedIn && member.guardian
+      ? {
+          relation: member.guardian.relation,
+          phoneNumber: formatPhoneNumber(member.guardian.phoneNumber),
+        }
+      : null;
+  return {
+    intakeId,
+    createdAt: new Date().toISOString(),
+    userUtterance: intake.emergency.userUtterance,
+    redFlagCategory: intake.emergency.redFlagCategory,
+    mainSymptom: intake.emergency.userUtterance,
+    onsetDetail: null,
+    ageGroup: isEnumValue(ageGroups, ageGroup) ? ageGroup : null,
+    gender: isEnumValue(genders, gender) ? gender : null,
+    medications: healthInfoOf(intake, "q_medications"),
+    conditions: healthInfoOf(intake, "q_conditions"),
+    allergies: healthInfoOf(intake, "q_allergies"),
+    guardian,
+  };
+}
+
 // ---- 요약지 ----
 
 // 건강 정보: 모른다고 하면 null, 없다고 하면 [], 있다고 하면 항목을 담습니다.
@@ -1004,6 +1042,10 @@ function recordSubtitle(content: SummaryContent): string {
 function maskPhoneNumber(digits: string): string {
   const stars = "*".repeat(digits.length - 7);
   return `${digits.slice(0, 3)}-${stars}-${digits.slice(-4)}`;
+}
+
+function formatPhoneNumber(digits: string): string {
+  return `${digits.slice(0, 3)}-${digits.slice(3, -4)}-${digits.slice(-4)}`;
 }
 
 function toGuardian(guardian: MockGuardian) {

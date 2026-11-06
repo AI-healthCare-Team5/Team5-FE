@@ -17,16 +17,16 @@ beforeEach(() => {
 });
 
 describe("EmergencyPage", () => {
-  it("경고, 119 전화, 면책을 그리고 E02 경로가 없어 응급 카드 링크는 숨긴다", () => {
+  it("경고, 119 전화, 응급 카드 링크, 면책을 그린다", () => {
     const markup = renderPage();
 
     expect(markup).toContain("위험 신호를 감지했어요");
     expect(markup).toContain('href="tel:119"');
+    expect(markup).toContain('href="/emergency-card"');
+    expect(markup).toContain("구급대원에게 보여줄 응급 카드");
     expect(markup).toContain(
       "정해진 위험 신호 기준에 따른 안내이며, 진단이 아니에요.",
     );
-    expect(markup).not.toContain("/emergency-card");
-    expect(markup).not.toContain("구급대원에게 보여줄 응급 카드");
   });
 
   it("응급 전환으로 들어오면 말씀하신 내용을 따옴표로 보여 준다", () => {

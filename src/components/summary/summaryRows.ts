@@ -24,7 +24,8 @@ const genderLabels: Record<Gender, string> = {
   FEMALE: "여성",
 };
 
-function formatHealthInfo(value: SummaryContent["medications"]): string {
+// 응급 카드(E02)도 같은 모양의 건강 정보를 받아 이 문구로 보여 줍니다.
+export function formatHealthInfo(value: SummaryContent["medications"]): string {
   return formatCollectedList(
     value &&
       value.map(({ name, detail }: HealthInfoItem) =>
@@ -33,12 +34,22 @@ function formatHealthInfo(value: SummaryContent["medications"]): string {
   );
 }
 
+// 하나만 없으면 그쪽만 "확인 못 했어요"로, 둘 다 없으면 한 번만 씁니다.
+export function formatAgeGender(
+  ageGroup: AgeGroup | null,
+  gender: Gender | null,
+): string {
+  const age = ageGroup ? ageGroupLabels[ageGroup] : null;
+  const sex = gender ? genderLabels[gender] : null;
+  return age || sex
+    ? `${age ?? UNCHECKED_TEXT} · ${sex ?? UNCHECKED_TEXT}`
+    : UNCHECKED_TEXT;
+}
+
 // 요약지 항목 순서: 나이대·성별 / 주된 증상 / 언제부터 / 증상별 항목(order 순) / 추가 내용 / 복용약 / 앓는 병 / 알레르기 / 진료과
 // 추가 내용은 선택 입력이라 "확인 못 했어요" 대신 값이 있을 때만 행을 만듭니다.
 export function buildSummaryRows(summary: SummaryContent): SummaryRow[] {
   // 나이대·성별·진료과는 명세상 항상 있지만, 서버가 비워 보내도 화면이 깨지지 않게 "확인 못 했어요"로 보여 줍니다.
-  const ageGroup = summary.ageGroup ? ageGroupLabels[summary.ageGroup] : null;
-  const gender = summary.gender ? genderLabels[summary.gender] : null;
   const items = [...summary.items]
     .sort((a, b) => a.order - b.order)
     .map((item) => ({
@@ -50,10 +61,7 @@ export function buildSummaryRows(summary: SummaryContent): SummaryRow[] {
     {
       key: "ageGender",
       label: "나이대 · 성별",
-      value:
-        ageGroup || gender
-          ? `${ageGroup ?? UNCHECKED_TEXT} · ${gender ?? UNCHECKED_TEXT}`
-          : UNCHECKED_TEXT,
+      value: formatAgeGender(summary.ageGroup, summary.gender),
     },
     {
       key: "mainSymptom",

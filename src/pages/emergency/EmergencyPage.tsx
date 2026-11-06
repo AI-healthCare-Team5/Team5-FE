@@ -6,7 +6,7 @@ import { ScreenIcon } from "@/components/ScreenElements";
 import { WarningNotice } from "@/components/WarningNotice";
 import { LOCATION_FAILED_MESSAGE } from "@/components/map/currentPosition";
 import type { MapLocation } from "@/components/map/types";
-import { Button, Disclaimer, PageTitle } from "@/components/ui";
+import { ActionLink, Button, Disclaimer, PageTitle } from "@/components/ui";
 import { EmergencyRoomCard } from "@/pages/emergency/components/EmergencyRoomCard";
 import {
   findEmergencyRooms,
@@ -131,8 +131,10 @@ export function EmergencyPage() {
           <PublicDataNotice dataUpdatedAt={rooms.dataUpdatedAt} />
         </section>
       )}
-      {/* 디자인의 "구급대원에게 보여줄 응급 카드"(E02) 링크는 #30에서 /emergency-card 경로가 생기면 이 자리에 둡니다. */}
       <div className="flex flex-col gap-3">
+        <ActionLink to="/emergency-card">
+          구급대원에게 보여줄 응급 카드
+        </ActionLink>
         <Disclaimer>
           정해진 위험 신호 기준에 따른 안내이며, 진단이 아니에요.
         </Disclaimer>

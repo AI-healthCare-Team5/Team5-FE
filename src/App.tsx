@@ -13,6 +13,7 @@ import { HospitalErrorPage } from "@/pages/hospital-error/HospitalErrorPage";
 import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 import { SummaryPage } from "@/pages/summary/SummaryPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
+import { EmergencyCardPage } from "@/pages/emergency-card/EmergencyCardPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
 import { GuardianPage } from "@/pages/guardian/GuardianPage";
 import { LoginPage } from "@/pages/login/LoginPage";
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
       { path: "/summary", element: <SummaryPage /> },
       { path: "/emergency", element: <EmergencyPage /> },
+      { path: "/emergency-card", element: <EmergencyCardPage /> },
       { path: "/guardian", element: <GuardianPage /> },
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },

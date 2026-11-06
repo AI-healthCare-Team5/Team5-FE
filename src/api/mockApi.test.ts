@@ -865,6 +865,39 @@ describe("가짜 문진의 응급 전환", () => {
     });
   });
 
+  it("응급 카드는 받은 답만 채우고 못 물은 항목은 null이며, 응급이 아닌 문진은 SUMMARY_409, 없는 문진은 SUMMARY_404다", async () => {
+    const api = await loadMockApi();
+    const emergency = await api.startIntake({
+      ...buttonStart,
+      text: "가슴이 답답해요",
+    });
+
+    await expect(
+      api.getEmergencyCard(emergency.intakeId),
+    ).resolves.toMatchObject({
+      intakeId: emergency.intakeId,
+      userUtterance: "가슴이 답답해요",
+      redFlagCategory: "CHEST_PAIN",
+      mainSymptom: "가슴이 답답해요",
+      onsetDetail: null,
+      ageGroup: null,
+      gender: null,
+      medications: null,
+      conditions: null,
+      allergies: null,
+      guardian: null,
+    });
+
+    const normal = await api.startIntake(buttonStart);
+    await expect(api.getEmergencyCard(normal.intakeId)).rejects.toMatchObject({
+      code: "SUMMARY_409",
+    });
+    await expect(api.getEmergencyCard("missing")).rejects.toMatchObject({
+      code: "SUMMARY_404",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("문구가 없는 시작과 버튼 답은 응급으로 바꾸지 않는다", async () => {
     const api = await loadMockApi();
 
