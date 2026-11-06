@@ -16,35 +16,36 @@ const guardian: Guardian = {
 
 function renderCard(props: Partial<Parameters<typeof GuardianCard>[0]> = {}) {
   return renderToStaticMarkup(
-    <GuardianCard
-      guardian={guardian}
-      busy={false}
-      message={null}
-      onRemove={() => Promise.resolve(true)}
-      {...props}
-    />,
+    <MemoryRouter>
+      <GuardianCard
+        guardian={guardian}
+        busy={false}
+        message={null}
+        onRemove={() => Promise.resolve(true)}
+        {...props}
+      />
+    </MemoryRouter>,
   );
 }
 
 describe("GuardianCard", () => {
-  it("등록됐으면 관계와 가린 번호, 지우기를 보여 준다", () => {
+  it("등록됐으면 관계와 가린 번호, 바꾸기(→ E03)와 지우기를 보여 준다", () => {
     const markup = renderCard();
 
     expect(markup).toContain("보호자 연락처");
     expect(markup).toContain("딸 · 010-****-0000");
+    expect(markup).toMatch(/href="\/guardian"[^>]*>바꾸기</);
     expect(markup).toMatch(/<button[^>]*>지우기</);
+    expect(markup).not.toContain("등록하기");
     expect(markup).not.toContain("등록된 연락처가 없어요");
   });
 
-  it("E03 경로가 없어 바꾸기·등록하기 링크를 그리지 않는다", () => {
-    expect(renderCard()).not.toContain("/guardian");
-    expect(renderCard({ guardian: null })).not.toContain("/guardian");
-  });
-
-  it("등록하지 않았으면 지우기 없이 안내만 보여 준다", () => {
+  it("등록하지 않았으면 안내와 등록하기(→ E03)를 보여 주고 바꾸기·지우기는 없다", () => {
     const markup = renderCard({ guardian: null });
 
     expect(markup).toContain("등록된 연락처가 없어요");
+    expect(markup).toMatch(/href="\/guardian"[^>]*>등록하기</);
+    expect(markup).not.toContain("바꾸기");
     expect(markup).not.toContain("지우기");
   });
 

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { Link } from "react-router";
 import type { Guardian } from "@/api/guardians";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { WarningNotice } from "@/components/WarningNotice";
@@ -15,7 +16,7 @@ const linkClass =
   "flex min-h-[44px] items-center font-bold text-brand-strong underline underline-offset-4 disabled:cursor-not-allowed disabled:text-muted";
 
 // P01 보호자 연락처 카드입니다. 전화번호는 내 정보 응답처럼 가운데를 가린 값입니다.
-// "바꾸기"·"등록하기"는 보호자 연락처 등록(E03, #31) 경로가 생기면 이 카드에 둡니다.
+// "바꾸기"·"등록하기"는 보호자 연락처 등록(E03)으로 가고, E03은 저장·취소 후 이 화면으로 돌아옵니다.
 export function GuardianCard({
   guardian,
   busy,
@@ -66,6 +67,9 @@ export function GuardianCard({
             {formatGuardian(guardian)}
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link to="/guardian" className={linkClass}>
+              바꾸기
+            </Link>
             <button
               ref={removeRef}
               type="button"
@@ -87,7 +91,12 @@ export function GuardianCard({
           {message && <WarningNotice>{message}</WarningNotice>}
         </div>
       ) : (
-        <p className="text-muted">등록된 연락처가 없어요</p>
+        <div className="space-y-2">
+          <p className="text-muted">등록된 연락처가 없어요</p>
+          <Link to="/guardian" className={linkClass}>
+            등록하기
+          </Link>
+        </div>
       )}
     </Card>
   );

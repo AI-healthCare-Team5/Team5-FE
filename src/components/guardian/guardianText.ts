@@ -1,14 +1,11 @@
 import type { Relation } from "@/api/enums";
 import type { Guardian } from "@/api/guardians";
+import { relationOptions } from "@/stores/guardianForm";
 
-// 보호자 관계의 화면 문구입니다. Figma E03의 선택지와 같습니다.
-// P01(내 정보), E02(응급 카드), E03(등록)이 같은 문구를 씁니다.
-export const relationLabels: Record<Relation, string> = {
-  SPOUSE: "배우자",
-  SON: "아들",
-  DAUGHTER: "딸",
-  ETC: "가족 · 지인",
-};
+// 보호자 관계의 화면 문구입니다. E03 선택지(relationOptions)와 같은 것을 씁니다.
+export const relationLabels = Object.fromEntries(
+  relationOptions.map(({ value, label }) => [value, label]),
+) as Record<Relation, string>;
 
 // "딸 · 010-0000-0000". 전화번호는 서버가 준 모양(내 정보에서는 가운데를 가림) 그대로 씁니다.
 export function formatGuardian(guardian: Guardian): string {
