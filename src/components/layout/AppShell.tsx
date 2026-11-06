@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
+import { getPageTitle } from "@/components/layout/pageTitle";
 import { appActions } from "@/stores/appStore";
 
 const fontSizes = [18, 22, 26] as const;
@@ -41,9 +42,9 @@ export function AppShell() {
   }, [pathname]);
   useEffect(() => {
     window.scrollTo(0, 0);
+    document.title = getPageTitle(pathname);
     const heading = document.querySelector<HTMLElement>("main h1");
     if (heading) {
-      document.title = `${heading.textContent} · 진료한장`;
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
     }
