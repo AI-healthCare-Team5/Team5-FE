@@ -98,9 +98,15 @@ describe("로그인 후 갈 화면", () => {
     ).toBe("/summary");
   });
 
-  it("보관하러 온 게 아니면 동의가 필요해도 원래 화면으로 간다", () => {
+  it("보관하러 온 게 아니어도 동의가 필요하면 C02로 간다", () => {
     expect(
       getLoginDestination({ returnTo: "/my-info", saveTarget: null }, true),
+    ).toBe("/record-consent");
+  });
+
+  it("보관하러 온 게 아니고 이미 동의했으면 원래 화면으로 간다", () => {
+    expect(
+      getLoginDestination({ returnTo: "/my-info", saveTarget: null }, false),
     ).toBe("/my-info");
   });
 });

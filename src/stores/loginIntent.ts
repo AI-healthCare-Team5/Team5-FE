@@ -79,11 +79,12 @@ export function clearLoginIntent() {
 }
 
 // 로그인 후 갈 화면입니다.
-// 기록 저장 동의(C02)는 "로그인하고 보관하기"로 들어왔고 아직 동의하지 않았을 때만 거칩니다.
+// 기록 저장 동의(C02)는 아직 동의하지 않았으면 어디서 로그인했든 거칩니다(처음 로그인).
+// 동의한 뒤의 로그인은 바로 원래 화면으로 갑니다.
 export function getLoginDestination(
   intent: LoginIntent,
   needsRecordConsent: boolean,
 ): string {
-  if (intent.saveTarget && needsRecordConsent) return "/record-consent";
+  if (needsRecordConsent) return "/record-consent";
   return intent.returnTo;
 }
