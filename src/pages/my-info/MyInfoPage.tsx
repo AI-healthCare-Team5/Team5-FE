@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { WarningNotice } from "@/components/WarningNotice";
 import { ActionLink, Button, Card, PageTitle } from "@/components/ui";
+import { fromMyInfoState } from "@/pages/emergency-card/emergencyCard";
 import { AccountCard } from "@/pages/my-info/components/AccountCard";
 import { GuardianCard } from "@/pages/my-info/components/GuardianCard";
 import { GuardianConsentCard } from "@/pages/my-info/components/GuardianConsentCard";
@@ -98,7 +99,13 @@ export function MyInfoPage() {
             }
           />
           {state.guardianConsent && <GuardianConsentCard />}
-          {/* "응급 카드 미리 보기"(E02, #30)는 /emergency-card 경로가 생기면 이 자리에 둡니다. */}
+          <ActionLink
+            to="/emergency-card"
+            variant="outline"
+            state={fromMyInfoState}
+          >
+            응급 카드 미리 보기
+          </ActionLink>
         </>
       )}
       <ActionLink to="/" variant="quiet">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { DesignIcon } from "@/components/DesignIcon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { WarningNotice } from "@/components/WarningNotice";
@@ -10,6 +10,7 @@ import { ActionLink, Button } from "@/components/ui";
 import { EmergencyCardView } from "@/pages/emergency-card/components/EmergencyCardView";
 import {
   cardAddress,
+  isFromMyInfo,
   loadEmergencyCard,
   type EmergencyCardLoad,
 } from "@/pages/emergency-card/emergencyCard";
@@ -25,6 +26,7 @@ import { removeGuardianContact } from "@/stores/memberSession";
 export function EmergencyCardPage() {
   const { emergency, currentLocation, loggedIn, guardian } = useAppStore();
   const navigate = useNavigate();
+  const fromMyInfo = isFromMyInfo(useLocation().state);
   const intakeId = emergency?.intakeId ?? null;
   // 받은 결과를 어느 문진의 것인지와 함께 둬서, 문진이 바뀌면 이전 카드를 보여 주지 않습니다.
   const [loaded, setLoaded] = useState<{
@@ -216,9 +218,11 @@ export function EmergencyCardPage() {
           <DesignIcon name="phone" size={30} />
           119에 전화하기
         </a>
-        <ActionLink to="/emergency" variant="outline">
-          응급 안내로 돌아가기
-        </ActionLink>
+        {!fromMyInfo && (
+          <ActionLink to="/emergency" variant="outline">
+            응급 안내로 돌아가기
+          </ActionLink>
+        )}
         <ActionLink to="/" variant="quiet">
           처음으로
         </ActionLink>

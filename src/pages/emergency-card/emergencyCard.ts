@@ -1,4 +1,3 @@
-import type { Relation } from "@/api/enums";
 import {
   getErrorMessage,
   isApiError,
@@ -13,7 +12,6 @@ import {
   formatAgeGender,
   formatHealthInfo,
 } from "@/components/summary/summaryRows";
-import { relationOptions } from "@/stores/guardianForm";
 
 export interface EmergencyCardRow {
   key: string;
@@ -22,11 +20,6 @@ export interface EmergencyCardRow {
   // "확인 못 했어요"는 디자인처럼 흐리게 보여 줍니다.
   unchecked: boolean;
 }
-
-// 관계 문구는 E03 선택지(relationOptions)와 같은 것을 씁니다.
-const relationLabels = Object.fromEntries(
-  relationOptions.map(({ value, label }) => [value, label]),
-) as Record<Relation, string>;
 
 // 응급 카드 항목 순서: 주된 증상 / 시작 시점 / 나이 · 성별 / 복용약 / 앓는 병 / 알레르기 / 현재 위치
 // 보호자 연락처는 전화 버튼이 있어 따로 그립니다.
@@ -89,9 +82,16 @@ export function cardAddress(
   return found.address;
 }
 
-// "딸 · 010-0000-0000"
-export function formatGuardian(guardian: Guardian): string {
-  return `${relationLabels[guardian.relation]} · ${guardian.phoneNumber}`;
+// P01 "응급 카드 미리 보기"로 열었는지 라우터 state로 알립니다.
+// 응급 흐름이 아니므로 E02는 이때 "응급 안내로 돌아가기"를 숨깁니다.
+export const fromMyInfoState = { from: "my-info" } as const;
+
+export function isFromMyInfo(state: unknown): boolean {
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    (state as { from?: unknown }).from === "my-info"
+  );
 }
 
 // 전화 걸 주소입니다. 내 정보에서 받은 가린 번호(010-****-5678)는 걸 수 없어 null입니다.
