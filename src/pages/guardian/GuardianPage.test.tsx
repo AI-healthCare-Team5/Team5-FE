@@ -52,10 +52,10 @@ describe("GuardianPage", () => {
     expect(markup).toContain('id="guardian-save-hint"');
   });
 
-  it("아직 없는 내 정보 지우기를 할 수 있다고 안내하지 않는다", () => {
+  it("내 정보(P01)에서 지울 수 있다고 Figma 문구대로 안내한다", () => {
     const markup = renderPage();
 
     expect(markup).toContain("저장 위치와 보관 방식은 확정되는 대로 안내해요.");
-    expect(markup).not.toContain("내 정보에서 지울 수 있어요");
+    expect(markup).toContain("내 정보에서 지울 수 있어요.");
   });
 });

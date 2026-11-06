@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router";
+import { GUARDIAN_STORAGE_TEXT } from "@/components/guardian/guardianText";
 import { ActionLink, Button, Card, Notice, PageTitle } from "@/components/ui";
 
 const items = [
@@ -7,10 +8,7 @@ const items = [
     "응급 카드에 보호자 연락처를 보여 드려요. 구급대원이 바로 전화할 수 있어요.",
   ],
   ["무엇을 저장하나요?", "보호자와의 관계, 보호자의 전화번호"],
-  [
-    "어디에, 얼마나 저장하나요?",
-    "저장 위치와 보관 기간은 정책이 확정되면 이곳에 안내해요.",
-  ],
+  ["어디에, 얼마나 저장하나요?", `${GUARDIAN_STORAGE_TEXT}.`],
   [
     "동의하지 않으면요?",
     "병원 안내와 요약지는 그대로 쓸 수 있어요. 응급 카드에 보호자 연락처만 나오지 않아요.",

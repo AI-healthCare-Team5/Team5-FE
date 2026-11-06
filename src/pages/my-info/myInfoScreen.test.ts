@@ -9,12 +9,14 @@ import {
 import {
   loadMember,
   logoutMember,
+  removeGuardianContact,
   withdrawAccount,
 } from "@/stores/memberSession";
 
 vi.mock("@/stores/memberSession", () => ({
   loadMember: vi.fn(),
   logoutMember: vi.fn(),
+  removeGuardianContact: vi.fn(),
   withdrawAccount: vi.fn(),
 }));
 
@@ -22,6 +24,7 @@ vi.mock("@/stores/memberSession", () => ({
 const loadMock = vi.mocked(loadMember);
 const logoutMock = vi.mocked(logoutMember);
 const withdrawMock = vi.mocked(withdrawAccount);
+const removeGuardianMock = vi.mocked(removeGuardianContact);
 
 function setup() {
   const views: MyInfoView[] = [];
@@ -44,6 +47,7 @@ beforeEach(() => {
   loadMock.mockReset();
   logoutMock.mockReset();
   withdrawMock.mockReset();
+  removeGuardianMock.mockReset();
 });
 
 describe("P01 계정 영역", () => {
@@ -372,5 +376,87 @@ describe("P01 계정 영역", () => {
     await pending;
 
     expect(exits).toEqual([]);
+  });
+});
+
+describe("P01 보호자 연락처 지우기", () => {
+  it("지우면 true를 돌려주고 요청 표시를 푼다", async () => {
+    const { screen, last } = await loaded();
+    removeGuardianMock.mockResolvedValue({ kind: "removed" });
+
+    await expect(screen.removeGuardian()).resolves.toBe(true);
+
+    expect(removeGuardianMock).toHaveBeenCalledTimes(1);
+    expect(last()).toMatchObject({
+      busy: null,
+      actionMessage: null,
+      guardianMessage: null,
+    });
+  });
+
+  it("지우는 동안에는 다른 요청을 보내지 않고 버튼을 잠근다", async () => {
+    const { screen, views } = await loaded();
+    let resolve: () => void = () => {};
+    removeGuardianMock.mockReturnValue(
+      new Promise((res) => {
+        resolve = () => res({ kind: "removed" });
+      }),
+    );
+
+    const first = screen.removeGuardian();
+    expect(views.at(-1)?.busy).toBe("removeGuardian");
+    await expect(screen.removeGuardian()).resolves.toBe(false);
+    await screen.withdraw();
+    resolve();
+    await first;
+
+    expect(removeGuardianMock).toHaveBeenCalledTimes(1);
+    expect(withdrawMock).not.toHaveBeenCalled();
+  });
+
+  it("실패하면 보호자 카드에 안내하고 false를 돌려준다", async () => {
+    const { screen, last } = await loaded();
+    removeGuardianMock.mockResolvedValue({
+      kind: "failed",
+      message: SERVER_ERROR_MESSAGE,
+    });
+
+    await expect(screen.removeGuardian()).resolves.toBe(false);
+
+    expect(last()).toMatchObject({
+      busy: null,
+      guardianMessage: SERVER_ERROR_MESSAGE,
+      actionMessage: null,
+    });
+  });
+
+  it("로그인이 풀렸으면 다시 로그인하라고 안내한다", async () => {
+    const { screen, last } = await loaded();
+    removeGuardianMock.mockResolvedValue({ kind: "needsLogin" });
+
+    await expect(screen.removeGuardian()).resolves.toBe(false);
+
+    expect(last()).toMatchObject({
+      busy: null,
+      actionMessage: SIGNED_OUT_MESSAGE,
+      guardianMessage: null,
+    });
+  });
+
+  it("코드 실수는 안내로 바꾸지 않고 버튼만 풀어 준 뒤 그대로 던진다", async () => {
+    const { screen, last } = await loaded();
+    removeGuardianMock.mockRejectedValue(new TypeError("oops"));
+
+    await expect(screen.removeGuardian()).rejects.toThrow(TypeError);
+
+    expect(last()).toMatchObject({ busy: null, guardianMessage: null });
+  });
+
+  it("불러오기 전에는 지울 수 없다", async () => {
+    const { screen } = setup();
+
+    await expect(screen.removeGuardian()).resolves.toBe(false);
+
+    expect(removeGuardianMock).not.toHaveBeenCalled();
   });
 });

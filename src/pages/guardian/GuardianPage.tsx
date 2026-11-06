@@ -216,8 +216,8 @@ export function GuardianPage() {
         <span className="flex items-start gap-3">
           <ScreenIcon name="shield" size={22} />
           <span>
-            {/* "내 정보에서 지울 수 있어요"는 P01 지우기(#32)를 붙일 때 다시 넣습니다. */}
-            저장 위치와 보관 방식은 확정되는 대로 안내해요.
+            저장 위치와 보관 방식은 확정되는 대로 안내해요. 내 정보에서 지울 수
+            있어요.
           </span>
         </span>
       </Notice>
