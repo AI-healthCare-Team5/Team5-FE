@@ -105,6 +105,38 @@ describe("로그인 상태", () => {
   });
 });
 
+describe("입력 중인 보호자 연락처", () => {
+  it("로그아웃·탈퇴·지우기는 입력 중인 보호자 연락처를 지운다", () => {
+    for (const action of [
+      appActions.logout,
+      appActions.withdraw,
+      appActions.clearGuardianDraft,
+    ]) {
+      appActions.editGuardianDraft({
+        relation: "DAUGHTER",
+        phoneNumber: "01000000000",
+        consentAgreed: true,
+      });
+
+      action();
+
+      expect(getAppState().guardianDraft).toEqual({
+        relation: null,
+        phoneNumber: "",
+        consentAgreed: false,
+      });
+    }
+  });
+
+  it("이미 비어 있으면 지워도 상태를 새로 만들지 않는다", () => {
+    const before = getAppState();
+
+    appActions.clearGuardianDraft();
+
+    expect(getAppState()).toBe(before);
+  });
+});
+
 describe("동의와 보관 표시", () => {
   it("로그인하지 않았으면 동의했다고 바꾸지 않는다", () => {
     appActions.agreeToRecords();

@@ -4,6 +4,7 @@ import type { MemberInfo } from "@/api/members";
 import { requestCurrentPosition } from "@/components/map/currentPosition";
 import type { MapLocation } from "@/components/map/types";
 import type { EmergencyEntry } from "@/stores/emergency";
+import { emptyGuardianForm, type GuardianForm } from "@/stores/guardianForm";
 import { resetIntakeFlow } from "@/stores/intakeSession";
 import {
   readLoginIntent,
@@ -33,6 +34,8 @@ interface AppState {
   saveTarget: SaveTarget | null;
   // 지금 요약지를 내 기록에 보관했는지. 로그인·동의를 거쳐 S06으로 돌아와도 유지합니다.
   summarySaved: boolean;
+  // E03에서 입력 중인 보호자 연락처입니다. 동의 내용(C01)을 보고 돌아와도 남습니다.
+  guardianDraft: GuardianForm;
 }
 
 // 카카오를 다녀오거나 새로고침해도 로그인 전에 기억한 내용으로 이어집니다.
@@ -51,6 +54,7 @@ const initialState: AppState = {
   returnTo: loginIntent.returnTo,
   saveTarget: loginIntent.saveTarget,
   summarySaved: false,
+  guardianDraft: emptyGuardianForm,
 };
 
 // 계정에 묶인 값을 비로그인 상태로 되돌립니다.
@@ -145,6 +149,14 @@ export const appActions = {
     locationRequest = request;
     return request;
   },
+  editGuardianDraft(patch: Partial<GuardianForm>) {
+    update({ guardianDraft: { ...state.guardianDraft, ...patch } });
+  },
+  // 저장·취소, 그리고 E03·C01을 벗어날 때(AppShell) 부릅니다. 전화번호가 들어 있어 화면을 떠나면 남기지 않습니다.
+  clearGuardianDraft() {
+    if (state.guardianDraft === emptyGuardianForm) return;
+    update({ guardianDraft: emptyGuardianForm });
+  },
   prepareLogin(returnTo = "/records", saveTarget: SaveTarget | null = null) {
     update({ returnTo, saveTarget });
   },
@@ -209,6 +221,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      guardianDraft: emptyGuardianForm,
       ...forgetEmergency(),
     });
   },
@@ -220,6 +233,7 @@ export const appActions = {
       returnTo: "/records",
       saveTarget: null,
       summarySaved: false,
+      guardianDraft: emptyGuardianForm,
       ...forgetEmergency(),
     });
   },

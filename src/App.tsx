@@ -14,6 +14,7 @@ import { SummaryLoadingPage } from "@/pages/summary-loading/SummaryLoadingPage";
 import { SummaryPage } from "@/pages/summary/SummaryPage";
 import { EmergencyPage } from "@/pages/emergency/EmergencyPage";
 import { GuardianConsentPage } from "@/pages/guardian-consent/GuardianConsentPage";
+import { GuardianPage } from "@/pages/guardian/GuardianPage";
 import { LoginPage } from "@/pages/login/LoginPage";
 import { KakaoCallbackPage } from "@/pages/kakao-callback/KakaoCallbackPage";
 import { KAKAO_CALLBACK_PATH } from "@/api/auth";
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: "/summary-loading", element: <SummaryLoadingPage /> },
       { path: "/summary", element: <SummaryPage /> },
       { path: "/emergency", element: <EmergencyPage /> },
+      { path: "/guardian", element: <GuardianPage /> },
       { path: "/guardian-consent", element: <GuardianConsentPage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/login/failed", element: <LoginPage failed /> },

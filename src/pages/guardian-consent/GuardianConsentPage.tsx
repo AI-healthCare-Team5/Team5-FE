@@ -23,10 +23,9 @@ const items = [
 export function GuardianConsentPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo =
-    new URLSearchParams(location.search).get("from") === "guardian"
-      ? "/guardian"
-      : "/my-info";
+  const fromGuardian =
+    new URLSearchParams(location.search).get("from") === "guardian";
+  const returnTo = fromGuardian ? "/guardian" : "/my-info";
   return (
     <>
       <PageTitle>
@@ -49,7 +48,7 @@ export function GuardianConsentPage() {
       </Card>
       <Button onClick={() => navigate(returnTo)}>확인했어요</Button>
       <ActionLink to={returnTo} variant="outline">
-        돌아가기
+        {fromGuardian ? "연락처 등록으로 돌아가기" : "돌아가기"}
       </ActionLink>
     </>
   );
