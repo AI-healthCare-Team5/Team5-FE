@@ -26,30 +26,18 @@ afterEach(() => {
 
 describe("요약지 보관 카드", () => {
   it.each([
-    ["로그인 전", false, false],
-    ["로그인 뒤", true, false],
-    ["보관한 뒤", true, true],
+    ["로그인 전", false, false, "로그인하고 보관하기"],
+    ["로그인 뒤", true, false, "내 기록에 보관하기"],
+    ["보관한 뒤", true, true, "내 기록 보기"],
   ])(
-    "실제 경로에서는 백엔드가 구현되기 전이라 %s에도 카드를 그리지 않는다",
-    async (_name, loggedIn, saved) => {
+    "실제 경로에서도 %s 카드를 그린다",
+    async (_name, loggedIn, saved, text) => {
       const html = await render(false, { loggedIn, saved });
 
-      expect(html).toBe("");
+      expect(html).toContain("내 기록에 보관");
+      expect(html).toContain(text);
     },
   );
-
-  it("실제 경로에서는 보관 중이거나 실패 안내가 있어도 카드를 그리지 않는다", async () => {
-    expect(
-      await render(false, { loggedIn: true, saved: false, saving: true }),
-    ).toBe("");
-    expect(
-      await render(false, {
-        loggedIn: true,
-        saved: false,
-        message: "일시적인 오류가 생겼어요.",
-      }),
-    ).toBe("");
-  });
 
   it("목 모드에서는 로그인 전에 로그인하고 보관하기를 보여 준다", async () => {
     const html = await render(true, { loggedIn: false, saved: false });
