@@ -5,8 +5,9 @@ import {
   buildEmergencyCardRows,
   cardAddress,
   formatCardTime,
-  formatGuardian,
+  fromMyInfoState,
   guardianTelHref,
+  isFromMyInfo,
   loadEmergencyCard,
 } from "@/pages/emergency-card/emergencyCard";
 
@@ -110,19 +111,21 @@ describe("cardAddress", () => {
   });
 });
 
-describe("보호자 연락처", () => {
-  it("관계와 번호를 함께 보여 준다", () => {
-    expect(formatGuardian(card.guardian!)).toBe("딸 · 010-0000-0000");
-    expect(
-      formatGuardian({ relation: "ETC", phoneNumber: "010-1111-2222" }),
-    ).toBe("가족 · 지인 · 010-1111-2222");
-  });
-
+describe("보호자 전화", () => {
   it("전체 번호면 전화를 걸고, 가린 번호면 걸지 않는다", () => {
     expect(guardianTelHref(card.guardian!)).toBe("tel:01000000000");
     expect(
       guardianTelHref({ relation: "SON", phoneNumber: "010-****-5678" }),
     ).toBeNull();
+  });
+});
+
+describe("isFromMyInfo", () => {
+  it("내 정보의 미리 보기로 열었을 때만 true다", () => {
+    expect(isFromMyInfo(fromMyInfoState)).toBe(true);
+    expect(isFromMyInfo(null)).toBe(false);
+    expect(isFromMyInfo({ from: "emergency" })).toBe(false);
+    expect(isFromMyInfo("my-info")).toBe(false);
   });
 });
 

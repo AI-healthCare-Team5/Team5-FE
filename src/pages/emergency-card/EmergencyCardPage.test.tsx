@@ -2,11 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
 import { EmergencyCardPage } from "@/pages/emergency-card/EmergencyCardPage";
+import { fromMyInfoState } from "@/pages/emergency-card/emergencyCard";
 import { appActions } from "@/stores/appStore";
 
-function renderPage() {
+function renderPage(state?: unknown) {
   return renderToStaticMarkup(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[{ pathname: "/emergency-card", state }]}>
       <EmergencyCardPage />
     </MemoryRouter>,
   );
@@ -31,6 +32,15 @@ describe("EmergencyCardPage", () => {
       "환자가 말한 내용을 정리한 것이며 진단이 아닙니다.",
     );
     expect(markup).not.toContain("작성");
+  });
+
+  it("내 정보에서 미리 보기로 열면 응급 안내로 돌아가기는 숨기고 119와 처음으로는 둔다", () => {
+    const markup = renderPage(fromMyInfoState);
+
+    expect(markup).not.toContain('href="/emergency"');
+    expect(markup).not.toContain("응급 안내로 돌아가기");
+    expect(markup).toContain('href="tel:119"');
+    expect(markup).toMatch(/href="\/"[^>]*>처음으로</);
   });
 
   it("미리 보기에서는 내 정보의 보호자를 보여 주고, 가린 번호라 전화 버튼은 없다", () => {

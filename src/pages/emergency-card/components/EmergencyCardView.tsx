@@ -1,10 +1,10 @@
 import type { Guardian } from "@/api/guardians";
 import type { EmergencyCard } from "@/api/intakes";
 import { DesignIcon } from "@/components/DesignIcon";
+import { formatGuardian } from "@/components/guardian/guardianText";
 import {
   buildEmergencyCardRows,
   formatCardTime,
-  formatGuardian,
   guardianTelHref,
 } from "@/pages/emergency-card/emergencyCard";
 
