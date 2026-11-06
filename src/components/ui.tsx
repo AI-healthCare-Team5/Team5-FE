@@ -33,13 +33,16 @@ export function ActionLink({
   to,
   children,
   variant = "primary",
+  state,
 }: {
   to: string;
   children: ReactNode;
   variant?: Variant;
+  // 다음 화면에 넘길 이동 상태입니다(예: 위치를 얻지 못해 넘어온 경우).
+  state?: unknown;
 }) {
   return (
-    <Link className={buttonClass(variant)} to={to}>
+    <Link className={buttonClass(variant)} to={to} state={state}>
       {children}
     </Link>
   );

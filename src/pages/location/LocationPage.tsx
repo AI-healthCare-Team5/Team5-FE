@@ -7,7 +7,10 @@ import {
 import { WarningNotice } from "@/components/WarningNotice";
 import { LOCATION_FAILED_MESSAGE } from "@/components/map/currentPosition";
 import { ActionLink, Button, PageTitle } from "@/components/ui";
-import { isLocationFailed } from "@/pages/hospitals/hospitalSearch";
+import {
+  isLocationFailed,
+  locationFailedState,
+} from "@/pages/hospitals/hospitalSearch";
 export function LocationPage() {
   const navigate = useNavigate();
   // 병원 안내(S05)에서 위치를 얻지 못해 돌아온 경우에만 안내를 보여 줍니다.
@@ -45,7 +48,12 @@ export function LocationPage() {
           <ScreenIcon name="pin-white" size={24} />
           위치 허용하고 병원 찾기
         </ActionLink>
-        <ActionLink to="/region" variant="outline">
+        {/* 위치를 얻지 못해 온 경우에만 지역 선택(S05b)에서도 "위치를 확인하지 못했어요"를 보여 줍니다. */}
+        <ActionLink
+          to="/region"
+          variant="outline"
+          state={locationFailed ? locationFailedState : undefined}
+        >
           지역을 직접 고를게요
         </ActionLink>
         <Button variant="quiet" onClick={() => navigate(-1)}>
