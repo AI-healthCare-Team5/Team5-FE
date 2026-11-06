@@ -9,7 +9,7 @@ import type { IsoDateTime } from "@/api/types";
 //
 // `v1`의 근거: 백엔드 develop 브랜치 061842f의 application.yml 20~23행(app.consent.version.record·guardian: v1)입니다.
 // https://github.com/AI-healthCare-Team5/Team5-BE/blob/061842ff0552b50594c93aa3323d53a8e8470bfd/src/main/resources/application.yml#L20-L23
-// `CONSENT_400`(현재 버전이 아닌 policyVersion)은 같은 커밋의 ConsentController.java 38행에 있습니다(컨트롤러는 아직 NOT_IMPLEMENTED).
+// `CONSENT_400`(현재 버전이 아닌 policyVersion)은 같은 커밋의 ConsentController.java 38행에 있습니다.
 // 백엔드 main(1314d83)의 application.yml에는 이 설정이 없습니다.
 //
 // 아직 확인하지 못한 것(이 값으로 판단하지 않습니다):
