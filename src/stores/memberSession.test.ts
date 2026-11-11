@@ -215,6 +215,51 @@ describe("보호자", () => {
     expect(getAppState().loggedIn).toBe(false);
   });
 
+  it("응답이 도착한 뒤 화면을 떠나 취소됐다면 store를 바꾸지 않는다", async () => {
+    appActions.applyMember(info);
+    const controller = new AbortController();
+    saveGuardianMock.mockImplementation(async () => {
+      controller.abort();
+      return { guardianId: 4, relation: "SON", phoneNumber: "010-****-5678" };
+    });
+
+    await expect(
+      saveGuardianContact(input, controller.signal),
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(getAppState().guardian).toBeNull();
+  });
+
+  it("저장 중 로그아웃했다면 늦게 온 응답으로 보호자를 되살리지 않는다", async () => {
+    appActions.applyMember(info);
+    saveGuardianMock.mockImplementation(async () => {
+      appActions.logout();
+      return { guardianId: 4, relation: "SON", phoneNumber: "010-****-5678" };
+    });
+
+    await expect(saveGuardianContact(input)).resolves.toEqual({
+      kind: "needsLogin",
+    });
+
+    expect(getAppState()).toMatchObject({
+      loggedIn: false,
+      guardian: null,
+      guardianConsent: false,
+    });
+  });
+
+  it("네트워크 오류는 실패 안내로 돌려주고 store를 바꾸지 않는다", async () => {
+    appActions.applyMember(info);
+    saveGuardianMock.mockRejectedValue(
+      new ApiError("NETWORK_ERROR", "서버 안내 문장", 0),
+    );
+
+    await expect(saveGuardianContact(input)).resolves.toMatchObject({
+      kind: "failed",
+    });
+    expect(getAppState().guardian).toBeNull();
+  });
+
   it("서버 오류는 공통 안내로 돌려준다", async () => {
     saveGuardianMock.mockRejectedValue(apiError("GUARDIAN_500"));
 
