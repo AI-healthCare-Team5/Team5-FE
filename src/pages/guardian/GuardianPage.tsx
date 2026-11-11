@@ -60,6 +60,10 @@ export function GuardianPage() {
 
   // 고친 칸의 서버 안내만 지웁니다.
   function edit(field: GuardianField, patch: Partial<GuardianForm>) {
+    // 요청에는 누른 순간의 초안이 담기므로, 저장 중에 고치면 성공 시 고친 값이 지워집니다. 요청 중에는 고치지 못하게 합니다.
+    if (savingRef.current) {
+      return;
+    }
     appActions.editGuardianDraft(patch);
     setResult((previous) => {
       if (previous?.kind !== "invalid") {
@@ -173,6 +177,7 @@ export function GuardianPage() {
             <Chip
               key={value}
               selected={form.relation === value}
+              disabled={saving}
               onClick={() => edit("relation", { relation: value })}
             >
               {label}
@@ -196,6 +201,7 @@ export function GuardianPage() {
           autoComplete="off"
           placeholder="010-0000-0000"
           value={form.phoneNumber}
+          disabled={saving}
           onChange={(event) =>
             edit("phoneNumber", {
               phoneNumber: toPhoneDigits(event.target.value),
@@ -203,7 +209,7 @@ export function GuardianPage() {
           }
           aria-invalid={fieldErrors.phoneNumber ? true : undefined}
           aria-describedby={`guardian-phone-hint${fieldErrors.phoneNumber ? " guardian-phone-error" : ""}`}
-          className="min-h-[max(44px,3.6rem)] w-full rounded-[16px] border-2 border-control bg-surface px-4 py-3 text-[1.111rem] font-semibold placeholder:text-subtle"
+          className="min-h-[max(44px,3.6rem)] w-full rounded-[16px] border-2 border-control bg-surface px-4 py-3 text-[1.111rem] font-semibold placeholder:text-subtle disabled:cursor-not-allowed disabled:opacity-60"
         />
         <p id="guardian-phone-hint" className="text-[0.889rem] text-muted">
           숫자만 눌러 주세요
@@ -220,6 +226,7 @@ export function GuardianPage() {
             id="guardian-consent"
             type="checkbox"
             checked={form.consentAgreed}
+            disabled={saving}
             onChange={(event) =>
               edit("consentAgreed", { consentAgreed: event.target.checked })
             }
