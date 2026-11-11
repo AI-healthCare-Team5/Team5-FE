@@ -9,6 +9,7 @@ import {
 import {
   hospitalMarkerClassName,
   userLocationClassName,
+  userLocationLabelClassName,
 } from "@/components/map/markerStyle";
 import { nextMapLevel } from "@/components/map/mapLevel";
 import { syncMarkerLabels } from "@/components/map/markerLabels";
@@ -102,6 +103,9 @@ export function KakaoHospitalMap({
       const position = new maps.LatLng(hospital.latitude, hospital.longitude);
       const button = document.createElement("button");
       button.type = "button";
+      // 카카오는 오버레이를 붙일 때 내용물의 크기로 기준점을 잡습니다.
+      // 모양을 먼저 입혀야 마커 중심이 좌표에 맞습니다.
+      button.className = hospitalMarkerClassName(false);
       button.textContent = String(hospital.rank);
       button.addEventListener("click", () =>
         latestRef.current.onSelectHospital(hospital.id),
@@ -121,13 +125,21 @@ export function KakaoHospitalMap({
         userLocation.latitude,
         userLocation.longitude,
       );
+      // 점 중심이 좌표에 오도록 점만 흐름에 두고, 이름표는 옆에 띄웁니다.
+      const marker = document.createElement("div");
+      marker.className = "pointer-events-none relative h-[24px] w-[24px]";
       const dot = document.createElement("span");
       dot.className = userLocationClassName;
       dot.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = userLocationLabelClassName;
+      label.textContent = "내 위치";
+      marker.append(dot, label);
       const overlay = new maps.CustomOverlay({
         position,
-        content: dot,
-        zIndex: 0,
+        content: marker,
+        // 병원 마커 위에 두어, 가까이 있어도 가려지지 않게 합니다.
+        zIndex: 3,
       });
       overlay.setMap(map);
       overlays.push(overlay);
