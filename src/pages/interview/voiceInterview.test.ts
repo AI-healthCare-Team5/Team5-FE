@@ -235,6 +235,25 @@ describe("S03 음성 답변", () => {
     expect(last().intake?.status).toBe("COMPLETED");
   });
 
+  it("없어요 버튼은 현재 질문에 글(TEXT) 답으로 한 번만 보낸다", async () => {
+    const { interview, last } = await started();
+    const pending = deferred<IntakeStepResult>();
+    answerMock.mockReturnValue(pending.promise);
+
+    const first = interview.answerNone();
+    const second = interview.answerNone();
+    expect(last().busy).toBe(true);
+    pending.resolve(advanced(secondQuestion));
+    await Promise.all([first, second]);
+
+    expect(answerMock).toHaveBeenCalledTimes(1);
+    expect(answerMock.mock.calls[0][1]).toEqual({
+      questionId: "q_swelling",
+      inputMode: "TEXT",
+      answer: "없어요",
+    });
+  });
+
   it("서버가 못 알아듣고 같은 질문을 다시 물으면(reask) 같은 질문에 머문다", async () => {
     const { interview, last } = await started();
     sttMock.mockResolvedValue({ text: "음...", durationSec: 1 });

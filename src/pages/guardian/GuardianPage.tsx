@@ -1,30 +1,25 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate } from "react-router";
-import { isMockApi } from "@/api/client";
 import { ScreenIcon } from "@/components/ScreenElements";
 import { Button, Chip, Notice, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
 import {
-  decideGuardianSave,
+  createGuardianInput,
   missingGuardianFields,
   missingGuardianMessage,
   relationOptions,
+  toGuardianSaveResult,
   toPhoneDigits,
   type GuardianField,
   type GuardianForm,
   type GuardianSaveResult,
 } from "@/stores/guardianForm";
-
-const unavailableMessage =
-  "보호자 연락처 저장은 준비 중이에요. 서버를 연결한 뒤에 저장할 수 있어요.";
+import { saveGuardianContact } from "@/stores/memberSession";
 
 function resultMessage(result: GuardianSaveResult | null): string | null {
   if (result?.kind === "invalid" || result?.kind === "error") {
     return result.message;
-  }
-  if (result?.kind === "unavailable") {
-    return unavailableMessage;
   }
   return null;
 }
@@ -40,12 +35,22 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-// E03 보호자 연락처 등록입니다. 저장(PUT /api/members/me/guardian) 연결은 #29에서 하고,
-// 실패 응답은 그때 guardianSaveError로 바꿔 handle에 넘깁니다.
+// E03 보호자 연락처 등록·변경입니다. 저장은 PUT /api/members/me/guardian(saveGuardianContact)으로 보냅니다.
 export function GuardianPage() {
   const { loggedIn, guardianDraft: form } = useAppStore();
   const navigate = useNavigate();
   const [result, setResult] = useState<GuardianSaveResult | null>(null);
+  const [saving, setSaving] = useState(false);
+  // state는 다음 렌더 뒤에 바뀌므로, 연속 클릭을 막는 데는 ref를 씁니다.
+  const savingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  // 화면을 떠나면 진행 중인 저장 요청의 결과를 버립니다. 늦게 온 응답이 이동·안내·상태를 바꾸지 못하게 합니다.
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+    },
+    [],
+  );
   const missing = missingGuardianFields(form);
   const fieldErrors = result?.kind === "invalid" ? result.fieldErrors : {};
   const message = resultMessage(result);
@@ -55,6 +60,10 @@ export function GuardianPage() {
 
   // 고친 칸의 서버 안내만 지웁니다.
   function edit(field: GuardianField, patch: Partial<GuardianForm>) {
+    // 요청에는 누른 순간의 초안이 담기므로, 저장 중에 고치면 성공 시 고친 값이 지워집니다. 요청 중에는 고치지 못하게 합니다.
+    if (savingRef.current) {
+      return;
+    }
     appActions.editGuardianDraft(patch);
     setResult((previous) => {
       if (previous?.kind !== "invalid") {
@@ -99,11 +108,41 @@ export function GuardianPage() {
     }
   }
 
-  function save() {
-    const next = decideGuardianSave(form, { loggedIn, mockApi: isMockApi });
-    if (next) {
-      handle(next);
+  async function save() {
+    const input = createGuardianInput(form);
+    if (!input || savingRef.current) {
+      return;
     }
+    // 보호자는 로그인한 회원에게만 저장합니다. 로그인 뒤 /guardian으로 돌아옵니다.
+    if (!loggedIn) {
+      goToLogin();
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setResult(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let next: GuardianSaveResult;
+    try {
+      next = toGuardianSaveResult(
+        await saveGuardianContact(input, controller.signal),
+      );
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      throw error;
+    } finally {
+      if (!controller.signal.aborted) {
+        savingRef.current = false;
+        setSaving(false);
+      }
+    }
+    if (controller.signal.aborted) {
+      return;
+    }
+    handle(next);
   }
 
   function cancel() {
@@ -138,6 +177,7 @@ export function GuardianPage() {
             <Chip
               key={value}
               selected={form.relation === value}
+              disabled={saving}
               onClick={() => edit("relation", { relation: value })}
             >
               {label}
@@ -161,6 +201,7 @@ export function GuardianPage() {
           autoComplete="off"
           placeholder="010-0000-0000"
           value={form.phoneNumber}
+          disabled={saving}
           onChange={(event) =>
             edit("phoneNumber", {
               phoneNumber: toPhoneDigits(event.target.value),
@@ -168,7 +209,7 @@ export function GuardianPage() {
           }
           aria-invalid={fieldErrors.phoneNumber ? true : undefined}
           aria-describedby={`guardian-phone-hint${fieldErrors.phoneNumber ? " guardian-phone-error" : ""}`}
-          className="min-h-[max(44px,3.6rem)] w-full rounded-[16px] border-2 border-control bg-surface px-4 py-3 text-[1.111rem] font-semibold placeholder:text-subtle"
+          className="min-h-[max(44px,3.6rem)] w-full rounded-[16px] border-2 border-control bg-surface px-4 py-3 text-[1.111rem] font-semibold placeholder:text-subtle disabled:cursor-not-allowed disabled:opacity-60"
         />
         <p id="guardian-phone-hint" className="text-[0.889rem] text-muted">
           숫자만 눌러 주세요
@@ -185,6 +226,7 @@ export function GuardianPage() {
             id="guardian-consent"
             type="checkbox"
             checked={form.consentAgreed}
+            disabled={saving}
             onChange={(event) =>
               edit("consentAgreed", { consentAgreed: event.target.checked })
             }
@@ -228,11 +270,12 @@ export function GuardianPage() {
       )}
       <div className="flex flex-col gap-3">
         <Button
-          disabled={missing.length > 0}
+          disabled={missing.length > 0 || saving}
+          aria-busy={saving}
           aria-describedby={
             missing.length > 0 ? "guardian-save-hint" : undefined
           }
-          onClick={save}
+          onClick={() => void save()}
         >
           저장하기
         </Button>
@@ -244,7 +287,7 @@ export function GuardianPage() {
             {missingGuardianMessage(missing)}
           </p>
         )}
-        <Button variant="outline" onClick={cancel}>
+        <Button variant="outline" disabled={saving} onClick={cancel}>
           취소
         </Button>
       </div>

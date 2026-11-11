@@ -119,6 +119,13 @@ describe("S03 음성 문진 화면", () => {
     expect(markup).toContain("지금 드시는 약이 있나요?");
     expect(markup).toContain("말하기");
     expect(markup).not.toContain('aria-pressed="');
+    expect(markup).toContain(">없어요<");
+  });
+
+  it("복용약·앓는 병·알레르기가 아닌 질문에는 없어요 버튼이 없다", () => {
+    beginIntakeSession(intake());
+
+    expect(renderPage()).not.toContain(">없어요<");
   });
 
   it("서버가 같은 질문을 다시 묻는 중(reask)이면 '다시 말씀해 주세요'를 안내한다", () => {

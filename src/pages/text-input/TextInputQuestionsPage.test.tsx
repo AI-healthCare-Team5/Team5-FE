@@ -268,10 +268,10 @@ describe("IntakeAnswerText", () => {
     expect(markup).not.toMatch(/<button[^>]*disabled=""[^>]*>다음 질문</);
   });
 
-  it("요청 중이면 입력칸과 버튼을 잠근다", () => {
+  it("요청 중이면 입력칸과 버튼(다음·없어요)을 잠근다", () => {
     const markup = render({ initialText: "혈압약", busy: true });
 
-    expect(markup.match(/disabled=""/g)).toHaveLength(2);
+    expect(markup.match(/disabled=""/g)).toHaveLength(3);
     expect(markup).toContain('aria-busy="true"');
   });
 
@@ -284,5 +284,42 @@ describe("IntakeAnswerText", () => {
 
   it("글자 수를 제한한다", () => {
     expect(render({})).toContain('maxLength="200"');
+  });
+
+  it("글이 비어 있으면 없어요 버튼이 열려 있다", () => {
+    expect(render({})).not.toMatch(/<button[^>]*disabled=""[^>]*>없어요</);
+    expect(render({})).toContain(">없어요<");
+  });
+
+  it("글이 있으면 없어요 버튼을 잠그고 글은 그대로 둔다", () => {
+    const markup = render({ initialText: "혈압약" });
+
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>없어요</);
+    expect(markup).toContain(">혈압약</textarea>");
+  });
+
+  it("공백만 있으면 없어요 버튼이 열려 있다", () => {
+    expect(render({ initialText: "   " })).not.toMatch(
+      /<button[^>]*disabled=""[^>]*>없어요</,
+    );
+  });
+
+  it("요청 중이면 없어요 버튼도 잠근다", () => {
+    expect(render({ busy: true })).toMatch(
+      /<button[^>]*disabled=""[^>]*>없어요</,
+    );
+  });
+
+  it("없어요 답이 정해지지 않은 질문에는 버튼을 그리지 않는다", () => {
+    const markup = renderToStaticMarkup(
+      <IntakeAnswerText
+        question={{ ...medicationQuestion, questionId: "q_other" }}
+        reask={false}
+        last={false}
+        onSubmit={() => {}}
+      />,
+    );
+
+    expect(markup).not.toContain(">없어요<");
   });
 });

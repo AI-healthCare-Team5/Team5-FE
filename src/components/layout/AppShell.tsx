@@ -12,8 +12,15 @@ const hiddenEmergencyBarPaths = new Set([
   "/hospital-empty",
   "/hospital-error",
 ]);
-// 입력 중인 보호자 연락처(E03)를 남겨 두는 경로입니다. 동의 내용(C01)을 보고 돌아와도 이어서 쓸 수 있게 합니다.
-const guardianDraftPaths = new Set(["/guardian", "/guardian-consent"]);
+// 입력 중인 보호자 연락처(E03)를 남겨 두는 경로입니다. 동의 내용(C01)을 보고 돌아오거나,
+// 저장 중 로그인이 풀려 로그인 화면을 거쳐 뒤로 돌아와도 이어서 쓸 수 있게 합니다.
+// 카카오로 이동하면 메모리가 사라지므로 그 뒤의 복원은 하지 않습니다(전화번호를 브라우저 저장소에 두지 않음).
+const guardianDraftPaths = new Set([
+  "/guardian",
+  "/guardian-consent",
+  "/login",
+  "/login/failed",
+]);
 
 function readFontSize(): number {
   try {

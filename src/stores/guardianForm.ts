@@ -1,5 +1,6 @@
 import type { Relation } from "@/api/enums";
-import { getErrorMessage, getFieldErrors, isApiError } from "@/api/errors";
+import type { GuardianInput } from "@/api/guardians";
+import type { GuardianOutcome } from "@/stores/memberSession";
 
 // E03에서 입력 중인 보호자 연락처입니다. 동의 내용(C01)을 보고 돌아와도 남도록 앱 상태에 둡니다.
 export interface GuardianForm {
@@ -14,17 +15,6 @@ export const emptyGuardianForm: GuardianForm = {
   phoneNumber: "",
   consentAgreed: false,
 };
-
-// PUT /api/members/me/guardian 요청 본문입니다. 등록과 동의를 한 요청으로 보냅니다.
-// policyVersion(현재 동의서 버전)을 어디서 받는지는 API 연결(#29)에서 정하고 그때 붙입니다.
-export interface GuardianRequest {
-  relation: Relation;
-  phoneNumber: string;
-  consentAgreed: true;
-  policyVersion: string;
-}
-
-export type GuardianInput = Omit<GuardianRequest, "policyVersion">;
 
 // 화면에는 label을 보여 주고, 서버에는 value(enum)를 보냅니다.
 export const relationOptions: { value: Relation; label: string }[] = [
@@ -73,7 +63,8 @@ export function missingGuardianMessage(fields: GuardianField[]): string | null {
   return `${fields.map((field) => fieldNames[field]).join(", ")}를 확인해 주세요`;
 }
 
-// 다 채웠으면 요청 본문을 만들고, 빠진 항목이 있으면 null입니다.
+// 다 채웠으면 저장 입력을 만들고, 빠진 항목이 있으면 null입니다.
+// 요청 본문(policyVersion 포함)은 api/guardians.ts의 buildGuardianRequest가 만듭니다.
 export function createGuardianInput(form: GuardianForm): GuardianInput | null {
   if (missingGuardianFields(form).length > 0 || !form.relation) {
     return null;
@@ -95,8 +86,6 @@ export type GuardianSaveResult =
     }
   // AUTH_401: refresh 후에도 401이면 로그인(L01)으로 보냅니다.
   | { kind: "needsLogin" }
-  // API 연결(#29) 전 실제 경로입니다.
-  | { kind: "unavailable" }
   | { kind: "error"; message: string };
 
 const fieldErrorMessages: Record<GuardianField, string> = {
@@ -112,40 +101,31 @@ function isGuardianField(field: string): field is GuardianField {
   return field in fieldErrorMessages;
 }
 
-// 저장 요청이 실패했을 때 화면에서 할 일을 정합니다.
-export function guardianSaveError(error: unknown): GuardianSaveResult {
-  if (isApiError(error) && error.code === "AUTH_401") {
-    return { kind: "needsLogin" };
-  }
-  if (isApiError(error) && error.code === "GUARDIAN_400") {
+// 저장 결과(memberSession)를 화면에서 보여 줄 안내로 바꿉니다.
+export function toGuardianSaveResult(
+  outcome: GuardianOutcome,
+): GuardianSaveResult {
+  if (outcome.kind === "invalid") {
     const fieldErrors: Partial<Record<GuardianField, string>> = {};
     let message: string | null = null;
-    for (const { field } of getFieldErrors(error)) {
+    for (const { field } of outcome.fieldErrors) {
       if (isGuardianField(field)) {
         fieldErrors[field] = fieldErrorMessages[field];
       } else if (field === "policyVersion") {
         message = policyVersionMessage;
       }
     }
+    // 알 수 없는 칸이거나 errors가 비어 있으면 서버 안내 문장을 보여 줍니다.
     if (Object.keys(fieldErrors).length === 0 && !message) {
-      message = getErrorMessage(error);
+      message = outcome.message;
     }
     return { kind: "invalid", fieldErrors, message };
   }
-  return { kind: "error", message: getErrorMessage(error) };
-}
-
-// "저장하기"를 눌렀을 때 할 일입니다. 빠진 항목이 있으면 null입니다.
-// 보호자는 로그인한 회원에게만 저장하고, 저장 API 연결(#29) 전에는 가짜 응답에서만 저장된 것으로 봅니다.
-export function decideGuardianSave(
-  form: GuardianForm,
-  { loggedIn, mockApi }: { loggedIn: boolean; mockApi: boolean },
-): GuardianSaveResult | null {
-  if (!createGuardianInput(form)) {
-    return null;
+  if (outcome.kind === "failed") {
+    return { kind: "error", message: outcome.message };
   }
-  if (!loggedIn) {
+  if (outcome.kind === "needsLogin") {
     return { kind: "needsLogin" };
   }
-  return mockApi ? { kind: "saved" } : { kind: "unavailable" };
+  return { kind: "saved" };
 }
