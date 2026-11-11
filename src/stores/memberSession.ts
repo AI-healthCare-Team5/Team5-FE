@@ -12,7 +12,7 @@ import {
 } from "@/api/guardians";
 import { getMyInfo, withdrawMember } from "@/api/members";
 import type { FieldError } from "@/api/types";
-import { appActions } from "@/stores/appStore";
+import { appActions, getAppState } from "@/stores/appStore";
 
 // 회원 정보를 서버와 맞추는 동작입니다. React 밖에 두어서 화면 없이 테스트합니다.
 // 요청이 성공한 뒤에만 store를 바꾸고, 코드 실수(ApiError가 아닌 오류)와 취소는 그대로 던집니다.
@@ -70,8 +70,14 @@ export async function saveGuardianContact(
   input: GuardianInput,
   signal?: AbortSignal,
 ): Promise<GuardianOutcome> {
+  const wasLoggedIn = getAppState().loggedIn;
   try {
     const { relation, phoneNumber } = await saveGuardian(input, signal);
+    // 응답이 도착한 뒤 화면을 떠났거나(취소) 그 사이 로그아웃·탈퇴했다면 store를 덮어쓰지 않습니다.
+    signal?.throwIfAborted();
+    if (wasLoggedIn && !getAppState().loggedIn) {
+      return { kind: "needsLogin" };
+    }
     appActions.setGuardian({ relation, phoneNumber });
     return { kind: "saved" };
   } catch (error) {

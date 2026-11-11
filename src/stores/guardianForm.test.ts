@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { relations } from "@/api/enums";
-import { ApiError } from "@/api/errors";
 import {
   createGuardianInput,
-  decideGuardianSave,
   emptyGuardianForm,
-  guardianSaveError,
   missingGuardianFields,
   missingGuardianMessage,
   relationOptions,
+  toGuardianSaveResult,
   toPhoneDigits,
   type GuardianForm,
 } from "@/stores/guardianForm";
@@ -68,41 +66,26 @@ describe("보호자 입력", () => {
   });
 });
 
-describe("decideGuardianSave", () => {
-  it("빠진 항목이 있으면 아무것도 하지 않는다", () => {
-    expect(
-      decideGuardianSave(emptyGuardianForm, { loggedIn: true, mockApi: true }),
-    ).toBeNull();
+describe("toGuardianSaveResult", () => {
+  it("저장됐으면 saved로 옮긴다", () => {
+    expect(toGuardianSaveResult({ kind: "saved" })).toEqual({ kind: "saved" });
   });
 
-  it("로그인하지 않았으면 로그인으로 보낸다", () => {
-    expect(
-      decideGuardianSave(filled, { loggedIn: false, mockApi: true }),
-    ).toEqual({ kind: "needsLogin" });
-  });
-
-  it("가짜 응답에서만 저장되고, 실제 경로에서는 준비 중이다", () => {
-    expect(
-      decideGuardianSave(filled, { loggedIn: true, mockApi: true }),
-    ).toEqual({ kind: "saved" });
-    expect(
-      decideGuardianSave(filled, { loggedIn: true, mockApi: false }),
-    ).toEqual({ kind: "unavailable" });
-  });
-});
-
-describe("guardianSaveError", () => {
   it("GUARDIAN_400의 field마다 해당 칸 아래 안내를 붙인다", () => {
-    const error = new ApiError("GUARDIAN_400", "입력값을 확인해 주세요.", 400, {
-      errors: [
-        { field: "phoneNumber", reason: "숫자 10~11자리" },
-        { field: "consentAgreed", reason: "동의 필요" },
-      ],
-    });
-
-    expect(guardianSaveError(error)).toEqual({
+    expect(
+      toGuardianSaveResult({
+        kind: "invalid",
+        message: "입력값을 확인해 주세요.",
+        fieldErrors: [
+          { field: "phoneNumber", reason: "숫자 10~11자리" },
+          { field: "consentAgreed", reason: "동의 필요" },
+          { field: "relation", reason: "관계 필요" },
+        ],
+      }),
+    ).toEqual({
       kind: "invalid",
       fieldErrors: {
+        relation: "누구인지 다시 골라 주세요",
         phoneNumber: "전화번호를 숫자 10~11자리로 눌러 주세요",
         consentAgreed: "보호자 연락처 저장에 동의해 주세요",
       },
@@ -111,11 +94,13 @@ describe("guardianSaveError", () => {
   });
 
   it("현재 버전이 아닌 policyVersion은 칸이 없어 동의 내용을 다시 보라고 안내한다", () => {
-    const error = new ApiError("GUARDIAN_400", "입력값을 확인해 주세요.", 400, {
-      errors: [{ field: "policyVersion", reason: "현재 버전 아님" }],
-    });
-
-    expect(guardianSaveError(error)).toEqual({
+    expect(
+      toGuardianSaveResult({
+        kind: "invalid",
+        message: "입력값을 확인해 주세요.",
+        fieldErrors: [{ field: "policyVersion", reason: "현재 버전 아님" }],
+      }),
+    ).toEqual({
       kind: "invalid",
       fieldErrors: {},
       message:
@@ -123,13 +108,28 @@ describe("guardianSaveError", () => {
     });
   });
 
-  it("AUTH_401은 로그인으로, 그 밖의 오류는 공통 안내로 보낸다", () => {
-    expect(guardianSaveError(new ApiError("AUTH_401", "", 401))).toEqual({
+  it("errors가 비었거나 알 수 없는 칸이면 서버 안내 문장을 보여 준다", () => {
+    for (const fieldErrors of [[], [{ field: "etc", reason: "?" }]]) {
+      expect(
+        toGuardianSaveResult({
+          kind: "invalid",
+          message: "서버 안내 문장",
+          fieldErrors,
+        }),
+      ).toEqual({
+        kind: "invalid",
+        fieldErrors: {},
+        message: "서버 안내 문장",
+      });
+    }
+  });
+
+  it("로그인 필요와 그 밖의 실패를 옮긴다", () => {
+    expect(toGuardianSaveResult({ kind: "needsLogin" })).toEqual({
       kind: "needsLogin",
     });
-    expect(guardianSaveError(new ApiError("GUARDIAN_500", "", 500))).toEqual({
-      kind: "error",
-      message: "일시적인 오류가 생겼어요. 잠시 후 다시 시도해 주세요.",
-    });
+    expect(
+      toGuardianSaveResult({ kind: "failed", message: "네트워크" }),
+    ).toEqual({ kind: "error", message: "네트워크" });
   });
 });
