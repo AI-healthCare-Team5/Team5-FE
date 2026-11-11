@@ -29,4 +29,6 @@
   --color-amber-line: #fedf89;
   --color-amber-ink: #93370d;
   --color-desktop: #d0d5dd;
+  /* 지도의 현재 위치 점 전용입니다. 119 응급 빨강보다 분홍 쪽 색조라 서로 헷갈리지 않습니다. */
+  --color-locate: #e11d48;
 }
