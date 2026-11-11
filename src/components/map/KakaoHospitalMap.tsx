@@ -9,7 +9,6 @@ import {
 import {
   hospitalMarkerClassName,
   userLocationClassName,
-  userLocationLabelClassName,
 } from "@/components/map/markerStyle";
 import { nextMapLevel } from "@/components/map/mapLevel";
 import { syncMarkerLabels } from "@/components/map/markerLabels";
@@ -37,6 +36,7 @@ export function KakaoHospitalMap({
   appKey,
   hospitals,
   selectedHospitalId,
+  panRequest,
   userLocation,
   onSelectHospital,
   onLoadError,
@@ -45,6 +45,8 @@ export function KakaoHospitalMap({
   const [kakao, setKakao] = useState<{ maps: KakaoMapsApi; map: KakaoMap }>();
   const markersRef = useRef(new Map<string, HospitalMarker>());
   const panReadyRef = useRef(false);
+  // 이미 확보한 현재 위치의 지도 좌표입니다. 위치가 없으면 비어 있어 이동하지 않습니다.
+  const userPositionRef = useRef<KakaoLatLng | undefined>(undefined);
   const latestRef = useRef({
     hospitals,
     userLocation,
@@ -99,6 +101,7 @@ export function KakaoHospitalMap({
     const positions: KakaoLatLng[] = [];
     const markers = markersRef.current;
     markers.clear();
+    userPositionRef.current = undefined;
     hospitals.forEach((hospital) => {
       const position = new maps.LatLng(hospital.latitude, hospital.longitude);
       const button = document.createElement("button");
@@ -125,25 +128,19 @@ export function KakaoHospitalMap({
         userLocation.latitude,
         userLocation.longitude,
       );
-      // 점 중심이 좌표에 오도록 점만 흐름에 두고, 이름표는 옆에 띄웁니다.
-      const marker = document.createElement("div");
-      marker.className = "pointer-events-none relative h-[24px] w-[24px]";
       const dot = document.createElement("span");
       dot.className = userLocationClassName;
       dot.setAttribute("aria-hidden", "true");
-      const label = document.createElement("span");
-      label.className = userLocationLabelClassName;
-      label.textContent = "내 위치";
-      marker.append(dot, label);
       const overlay = new maps.CustomOverlay({
         position,
-        content: marker,
+        content: dot,
         // 병원 마커 위에 두어, 가까이 있어도 가려지지 않게 합니다.
         zIndex: 3,
       });
       overlay.setMap(map);
       overlays.push(overlay);
       positions.push(position);
+      userPositionRef.current = position;
     }
     if (positions.length === 1) {
       map.setCenter(positions[0]);
@@ -160,6 +157,21 @@ export function KakaoHospitalMap({
       markers.clear();
     };
   }, [kakao, pointsKey]);
+
+  // 글자 크기를 바꾸면 지도 칸의 너비가 달라집니다. 카카오맵은 크기 변화를 스스로 알지 못해,
+  // 다시 계산시키지 않으면 중심이 어긋나고 가장자리가 비어 보입니다.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!kakao || !container) return;
+    const { map } = kakao;
+    const observer = new ResizeObserver(() => {
+      const center = map.getCenter();
+      map.relayout();
+      map.setCenter(center);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [kakao]);
 
   useEffect(() => {
     if (!kakao) return;
@@ -200,12 +212,29 @@ export function KakaoHospitalMap({
     event.preventDefault();
   }
 
+  function moveToUserLocation() {
+    const position = userPositionRef.current;
+    if (kakao && position) kakao.map.panTo(position);
+  }
+
   function zoom(direction: "in" | "out") {
     if (!kakao) return;
     kakao.map.setLevel(nextMapLevel(kakao.map.getLevel(), direction), {
       animate: true,
     });
   }
+
+  // 카드 재클릭 요청입니다. 확대 단계와 범위는 건드리지 않고 선택한 마커로만 이동합니다.
+  useEffect(() => {
+    if (!kakao || !panRequest) return;
+    const selected =
+      selectedHospitalId === undefined
+        ? undefined
+        : markersRef.current.get(selectedHospitalId);
+    if (selected) kakao.map.panTo(selected.position);
+    // 요청 번호가 바뀔 때만 실행합니다. 선택·마커가 바뀌는 경우는 위 effect가 맡습니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kakao, panRequest]);
 
   return (
     <div className="space-y-2">
@@ -222,24 +251,51 @@ export function KakaoHospitalMap({
         />
         {/* eslint-enable jsx-a11y-x/no-noninteractive-element-interactions, jsx-a11y-x/no-noninteractive-tabindex */}
         {kakao ? (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+          <>
+            <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+              <button
+                type="button"
+                aria-label="지도 확대"
+                onClick={() => zoom("in")}
+                className={zoomButtonClassName}
+              >
+                <span aria-hidden="true">+</span>
+              </button>
+              <button
+                type="button"
+                aria-label="지도 축소"
+                onClick={() => zoom("out")}
+                className={zoomButtonClassName}
+              >
+                <span aria-hidden="true">−</span>
+              </button>
+            </div>
             <button
               type="button"
-              aria-label="지도 확대"
-              onClick={() => zoom("in")}
-              className={zoomButtonClassName}
+              disabled={userLocation === undefined}
+              aria-label={
+                userLocation === undefined
+                  ? "내 위치로 이동, 현재 위치를 확인하지 못해 쓸 수 없어요"
+                  : "내 위치로 이동"
+              }
+              onClick={moveToUserLocation}
+              className={`absolute right-2 bottom-2 z-10 ${zoomButtonClassName} disabled:cursor-not-allowed disabled:text-subtle`}
             >
-              <span aria-hidden="true">+</span>
+              <svg
+                aria-hidden="true"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+              </svg>
             </button>
-            <button
-              type="button"
-              aria-label="지도 축소"
-              onClick={() => zoom("out")}
-              className={zoomButtonClassName}
-            >
-              <span aria-hidden="true">−</span>
-            </button>
-          </div>
+          </>
         ) : (
           <p
             role="status"

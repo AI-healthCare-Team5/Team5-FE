@@ -14,6 +14,8 @@ export interface KakaoMap {
     paddingLeft?: number,
   ): void;
   setCenter(position: KakaoLatLng): void;
+  getCenter(): KakaoLatLng;
+  relayout(): void;
   setLevel(level: number, options?: { animate?: boolean }): void;
   getLevel(): number;
   panTo(position: KakaoLatLng): void;

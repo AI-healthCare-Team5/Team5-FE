@@ -33,6 +33,7 @@ export function HospitalResults({
   now: Date;
 }) {
   const [selectedId, setSelectedId] = useState<string>();
+  const [panRequest, setPanRequest] = useState(0);
   const { hospitals } = result;
   // 고르기 전에는 지금 목록의 첫 병원을 선택한 것으로 봅니다.
   const activeId = resolveActiveId(
@@ -57,6 +58,7 @@ export function HospitalResults({
           longitude: hospital.longitude,
         }))}
         selectedHospitalId={activeId}
+        panRequest={panRequest}
         userLocation={userLocation ?? undefined}
         onSelectHospital={(id) => {
           setSelectedId(id);
@@ -79,7 +81,10 @@ export function HospitalResults({
                 now={now}
                 rank={index + 1}
                 selected={id === activeId}
-                onSelect={() => setSelectedId(id)}
+                onSelect={() => {
+                  setSelectedId(id);
+                  setPanRequest((count) => count + 1);
+                }}
               />
             );
           })}

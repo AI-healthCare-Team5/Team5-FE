@@ -39,6 +39,7 @@ export function EmergencyPage() {
     result: HospitalSearchResult | null;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
+  const [panRequest, setPanRequest] = useState(0);
   const rooms = location && found?.location === location ? found.result : null;
 
   // 고르기 전에는 가장 가까운 응급실을 선택한 것으로 봅니다.
@@ -148,6 +149,7 @@ export function EmergencyPage() {
               longitude: room.longitude,
             }))}
             selectedHospitalId={activeId}
+            panRequest={panRequest}
             userLocation={location ?? undefined}
             onSelectHospital={(id) => {
               setSelectedId(id);
@@ -164,7 +166,10 @@ export function EmergencyPage() {
                   room={room}
                   rank={index + 1}
                   selected={id === activeId}
-                  onSelect={() => setSelectedId(id)}
+                  onSelect={() => {
+                    setSelectedId(id);
+                    setPanRequest((count) => count + 1);
+                  }}
                 />
               );
             })}
