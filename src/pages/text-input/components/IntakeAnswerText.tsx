@@ -1,7 +1,11 @@
 import { useId, useState } from "react";
 import { ReaskNotice } from "@/components/ReaskNotice";
 import { Button } from "@/components/ui";
-import type { IntakeQuestion } from "@/stores/intakeFlow";
+import {
+  canAnswerNone,
+  NONE_ANSWER,
+  type IntakeQuestion,
+} from "@/stores/intakeFlow";
 
 // 서버는 복용약·앓는 병·알레르기를 FREE_TEXT로 묻고, 이런 질문은 글이나 말로만 답할 수 있습니다(버튼이면 INTAKE_400).
 // 그래서 선택지 대신 글로 답하는 칸을 그립니다. 질문이 바뀌면 입력이 초기화되도록 부모에서 questionId를 key로 줍니다.
@@ -22,7 +26,7 @@ export function IntakeAnswerText({
   busy?: boolean;
   // 이전 질문으로 돌아왔을 때 직전에 쓴 글을 다시 보여 줍니다.
   initialText?: string;
-  // 앞뒤 공백을 뺀 글을 돌려줍니다.
+  // 앞뒤 공백을 뺀 글을 돌려줍니다. "없어요" 버튼도 같은 경로로 "없어요"를 보냅니다.
   onSubmit: (text: string) => void;
 }) {
   const [text, setText] = useState(initialText);
@@ -57,6 +61,16 @@ export function IntakeAnswerText({
       >
         {last ? "답변 마치기" : "다음 질문"}
       </Button>
+      {/* 쓴 글이 있으면 눌러도 지우거나 덮어쓰지 않도록 잠그고, 글을 모두 지우면 다시 누를 수 있습니다. */}
+      {canAnswerNone(question) && (
+        <Button
+          variant="outline"
+          disabled={answer !== "" || busy}
+          onClick={() => onSubmit(NONE_ANSWER)}
+        >
+          {NONE_ANSWER}
+        </Button>
+      )}
     </>
   );
 }

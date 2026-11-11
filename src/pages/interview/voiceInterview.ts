@@ -8,7 +8,7 @@ import {
   createIntakeQuestions,
   type IntakeQuestions,
 } from "@/pages/text-input/intakeQuestions";
-import type { IntakeOption } from "@/stores/intakeFlow";
+import { NONE_ANSWER, type IntakeOption } from "@/stores/intakeFlow";
 import { readIntakeSession, type IntakeSession } from "@/stores/intakeSession";
 
 // S03(음성 문진)의 동작입니다. React 밖에 두어서 화면 없이 테스트합니다.
@@ -52,6 +52,8 @@ export interface VoiceInterview {
   submitRecording: (recording: VoiceRecording) => Promise<void>;
   // 버튼으로 답합니다(inputMode=BUTTON). 답변마다 입력 방식이 달라도 됩니다.
   chooseAnswer: (choice: IntakeOption) => Promise<void>;
+  // "없어요" 버튼입니다. FREE_TEXT는 BUTTON 답을 받지 않으므로 글(TEXT)로 보냅니다.
+  answerNone: () => Promise<void>;
   back: () => Promise<void>;
   // 화면을 떠날 때 부릅니다. 진행 중인 요청을 취소하고 더는 알리지 않습니다.
   dispose: () => void;
@@ -175,6 +177,13 @@ export function createVoiceInterview(
     await questions.submit({ inputMode: "BUTTON", answer: choice.code });
   }
 
+  async function answerNone() {
+    if (disposed || view.busy || !questions) return;
+    failureStreak = 0;
+    update({ failure: null });
+    await questions.submit({ inputMode: "TEXT", answer: NONE_ANSWER });
+  }
+
   async function back() {
     if (disposed || view.busy || !questions) return;
     update({ failure: null });
@@ -188,5 +197,5 @@ export function createVoiceInterview(
     questions = null;
   }
 
-  return { submitRecording, chooseAnswer, back, dispose };
+  return { submitRecording, chooseAnswer, answerNone, back, dispose };
 }

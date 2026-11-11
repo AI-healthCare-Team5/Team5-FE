@@ -13,7 +13,7 @@ import {
   type VoiceInterviewExit,
 } from "@/pages/interview/voiceInterview";
 import { IntakeAnswerChoices } from "@/pages/text-input/components/IntakeAnswerChoices";
-import { answerChoices } from "@/stores/intakeFlow";
+import { answerChoices, canAnswerNone, NONE_ANSWER } from "@/stores/intakeFlow";
 import { readIntakeSession, type IntakeSession } from "@/stores/intakeSession";
 
 const stageLabels: Record<IntakeStage, string> = {
@@ -198,6 +198,16 @@ function InterviewScreen({ session }: { session: IntakeSession | null }) {
               <>
                 <ReaskNotice show={reask} />
                 {voiceArea}
+                {/* 녹음 시작·녹음 중·글자로 바꾸는 중·전송 중에는 마이크 답과 겹치지 않도록 잠급니다. */}
+                {question && canAnswerNone(question) && (
+                  <Button
+                    variant="outline"
+                    disabled={busy || recorder.status !== "idle"}
+                    onClick={() => void interviewRef.current?.answerNone()}
+                  >
+                    {NONE_ANSWER}
+                  </Button>
+                )}
               </>
             )}
           </>
