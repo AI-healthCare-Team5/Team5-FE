@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate } from "react-router";
 import { ScreenIcon } from "@/components/ScreenElements";
+import { GUARDIAN_STORAGE_TEXT } from "@/components/guardian/guardianText";
 import { Button, Chip, Notice, PageTitle } from "@/components/ui";
 import { appActions, useAppStore } from "@/stores/appStore";
 import {
@@ -257,10 +258,8 @@ export function GuardianPage() {
       <Notice>
         <span className="flex items-start gap-3">
           <ScreenIcon name="shield" size={22} />
-          <span>
-            저장 위치와 보관 방식은 확정되는 대로 안내해요. 내 정보에서 지울 수
-            있어요.
-          </span>
+          {/* 저장 위치는 10/30 백엔드 답변으로 정해져 P01·C01과 같은 문구를 씁니다(#32, #109). */}
+          <span>{GUARDIAN_STORAGE_TEXT}. 내 정보에서 지울 수 있어요.</span>
         </span>
       </Notice>
       {message && (
