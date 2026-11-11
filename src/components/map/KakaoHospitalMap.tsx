@@ -164,7 +164,12 @@ export function KakaoHospitalMap({
     const container = containerRef.current;
     if (!kakao || !container) return;
     const { map } = kakao;
+    // observe는 처음에도 한 번 알려 주므로, 너비가 실제로 달라졌을 때만 다시 계산합니다.
+    // 처음 그린 범위(setBounds)를 건드리지 않기 위해서입니다.
+    let lastWidth = container.clientWidth;
     const observer = new ResizeObserver(() => {
+      if (container.clientWidth === lastWidth) return;
+      lastWidth = container.clientWidth;
       const center = map.getCenter();
       map.relayout();
       map.setCenter(center);
