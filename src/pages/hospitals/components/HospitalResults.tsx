@@ -2,12 +2,19 @@ import { useState } from "react";
 import type { HospitalSearchResult } from "@/api/hospitals";
 import type { DepartmentRecommendation } from "@/api/intakes";
 import { PublicDataNotice } from "@/components/PublicDataNotice";
+import {
+  hospitalCardId,
+  resolveActiveId,
+  revealCard,
+} from "@/components/map/cardAnchor";
 import { HospitalMap } from "@/components/map/HospitalMap";
 import type { MapLocation } from "@/components/map/types";
 import { ActionLink, PageTitle } from "@/components/ui";
 import { HospitalCard } from "@/pages/hospitals/components/HospitalCard";
 
 // 추천 이유는 API가 만든 문장이라, 면책 문장은 화면에서 항상 붙입니다.
+// 지도 마커와 병원 카드를 잇는 ID 구분입니다.
+const cardScope = "hospitals";
 const disclaimer = "진단이 아니라 진료과 안내예요.";
 
 // S05에서 병원을 1곳 이상 찾았을 때의 화면입니다. 찾는 일과 이동은 HospitalsPage가 맡습니다.
@@ -28,7 +35,10 @@ export function HospitalResults({
   const [selectedId, setSelectedId] = useState<string>();
   const { hospitals } = result;
   // 고르기 전에는 지금 목록의 첫 병원을 선택한 것으로 봅니다.
-  const activeId = selectedId ?? hospitals[0]?.hospitalId.toString();
+  const activeId = resolveActiveId(
+    selectedId,
+    hospitals.map((hospital) => hospital.hospitalId.toString()),
+  );
   return (
     <>
       <PageTitle
@@ -39,7 +49,8 @@ export function HospitalResults({
         {department.departmentName}
       </PageTitle>
       <HospitalMap
-        hospitals={hospitals.map((hospital) => ({
+        hospitals={hospitals.map((hospital, index) => ({
+          rank: index + 1,
           id: hospital.hospitalId.toString(),
           name: hospital.name,
           latitude: hospital.latitude,
@@ -47,7 +58,10 @@ export function HospitalResults({
         }))}
         selectedHospitalId={activeId}
         userLocation={userLocation ?? undefined}
-        onSelectHospital={setSelectedId}
+        onSelectHospital={(id) => {
+          setSelectedId(id);
+          revealCard(cardScope, id);
+        }}
       />
       <section aria-labelledby="hospitals-list" className="flex flex-col gap-4">
         <h2 id="hospitals-list" className="text-[1.222rem] font-bold">
@@ -59,6 +73,7 @@ export function HospitalResults({
             return (
               <HospitalCard
                 key={id}
+                cardId={hospitalCardId(cardScope, id)}
                 hospital={hospital}
                 departmentCode={department.departmentCode}
                 now={now}

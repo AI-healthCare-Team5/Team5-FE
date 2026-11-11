@@ -14,8 +14,10 @@ export interface KakaoMap {
     paddingLeft?: number,
   ): void;
   setCenter(position: KakaoLatLng): void;
-  setLevel(level: number): void;
+  setLevel(level: number, options?: { animate?: boolean }): void;
+  getLevel(): number;
   panTo(position: KakaoLatLng): void;
+  panBy(dx: number, dy: number): void;
 }
 
 export interface KakaoCustomOverlay {
@@ -58,7 +60,10 @@ export interface KakaoMapsApi {
   LatLngBounds: new () => KakaoLatLngBounds;
   Map: new (
     container: HTMLElement,
-    options: { center: KakaoLatLng; level: number },
+    options: {
+      center: KakaoLatLng;
+      level: number;
+    },
   ) => KakaoMap;
   CustomOverlay: new (options: {
     position: KakaoLatLng;

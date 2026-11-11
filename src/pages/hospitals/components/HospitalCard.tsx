@@ -4,6 +4,7 @@ import { formatTodayHours } from "@/pages/hospitals/hospitalSearch";
 import type { Hospital } from "@/api/hospitals";
 
 export function HospitalCard({
+  cardId,
   hospital,
   departmentCode,
   now,
@@ -11,6 +12,8 @@ export function HospitalCard({
   selected,
   onSelect,
 }: {
+  // 지도 마커를 눌렀을 때 이 카드로 스크롤하는 데 쓰는 ID입니다.
+  cardId?: string;
   hospital: Hospital;
   // 추천 진료과입니다. 병원이 그 진료과를 가지고 있으면 진료과 이름을, 아니면 종별 이름을 보여 줍니다.
   departmentCode: string;
@@ -28,7 +31,8 @@ export function HospitalCard({
   const directionsUrl = `https://map.kakao.com/link/to/${encodeURIComponent(hospital.name)},${hospital.latitude},${hospital.longitude}`;
   return (
     <li
-      className={`flex flex-col gap-3 rounded-[20px] border-2 bg-surface p-4 ${selected ? "border-brand" : "border-line"}`}
+      id={cardId}
+      className={`flex scroll-mt-4 scroll-mb-[calc(69px+1rem)] flex-col gap-3 rounded-[20px] border-2 bg-surface p-4 ${selected ? "border-brand" : "border-line"}`}
     >
       <button
         type="button"

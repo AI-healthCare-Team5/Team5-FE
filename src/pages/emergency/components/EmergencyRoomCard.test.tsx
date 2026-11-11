@@ -25,8 +25,16 @@ const room: Hospital = {
   },
 };
 
-function render(value: Hospital) {
-  return renderToStaticMarkup(<EmergencyRoomCard room={value} />);
+function render(value: Hospital, selected = false) {
+  return renderToStaticMarkup(
+    <EmergencyRoomCard
+      cardId="emergency-card-301"
+      room={value}
+      rank={1}
+      selected={selected}
+      onSelect={() => undefined}
+    />,
+  );
 }
 
 describe("응급실 카드", () => {
@@ -59,5 +67,15 @@ describe("응급실 카드", () => {
 
     expect(markup).not.toContain("tel:");
     expect(markup).toContain("길 찾기");
+  });
+
+  it("지도 마커와 이어지는 ID와 번호, 선택 상태를 그린다", () => {
+    const unselected = render(room);
+    const selected = render(room, true);
+
+    expect(unselected).toContain('id="emergency-card-301"');
+    expect(unselected).toContain('aria-pressed="false"');
+    expect(selected).toContain('aria-pressed="true"');
+    expect(selected).toContain(">1</span>");
   });
 });

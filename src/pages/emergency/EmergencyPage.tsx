@@ -4,7 +4,13 @@ import { DesignIcon } from "@/components/DesignIcon";
 import { PublicDataNotice } from "@/components/PublicDataNotice";
 import { ScreenIcon } from "@/components/ScreenElements";
 import { WarningNotice } from "@/components/WarningNotice";
+import {
+  hospitalCardId,
+  resolveActiveId,
+  revealCard,
+} from "@/components/map/cardAnchor";
 import { LOCATION_FAILED_MESSAGE } from "@/components/map/currentPosition";
+import { HospitalMap } from "@/components/map/HospitalMap";
 import type { MapLocation } from "@/components/map/types";
 import { ActionLink, Button, Disclaimer, PageTitle } from "@/components/ui";
 import { EmergencyRoomCard } from "@/pages/emergency/components/EmergencyRoomCard";
@@ -21,6 +27,9 @@ import { appActions, useAppStore } from "@/stores/appStore";
 // failed: 눌러서 물었지만 받지 못했습니다. 안내와 함께 다시 누를 수 있습니다.
 type Locating = "checking" | "manual" | "asking" | "failed";
 
+// 지도 마커와 응급실 카드를 잇는 ID 구분입니다.
+const cardScope = "emergency";
+
 export function EmergencyPage() {
   const { emergency, currentLocation: location } = useAppStore();
   const [locating, setLocating] = useState<Locating>("checking");
@@ -29,7 +38,14 @@ export function EmergencyPage() {
     location: MapLocation;
     result: HospitalSearchResult | null;
   } | null>(null);
+  const [selectedId, setSelectedId] = useState<string>();
   const rooms = location && found?.location === location ? found.result : null;
+
+  // 고르기 전에는 가장 가까운 응급실을 선택한 것으로 봅니다.
+  const activeId = resolveActiveId(
+    selectedId,
+    rooms?.hospitals.map((room) => room.hospitalId.toString()) ?? [],
+  );
 
   // 들어오자마자 권한 창을 띄우지 않습니다. 권한 창이 119 버튼을 가리지 않게 하려는 것입니다.
   useEffect(() => {
@@ -123,10 +139,35 @@ export function EmergencyPage() {
           >
             가까운 응급실
           </h2>
+          <HospitalMap
+            hospitals={rooms.hospitals.map((room, index) => ({
+              rank: index + 1,
+              id: room.hospitalId.toString(),
+              name: room.name,
+              latitude: room.latitude,
+              longitude: room.longitude,
+            }))}
+            selectedHospitalId={activeId}
+            userLocation={location ?? undefined}
+            onSelectHospital={(id) => {
+              setSelectedId(id);
+              revealCard(cardScope, id);
+            }}
+          />
           <ol className="flex flex-col gap-3">
-            {rooms.hospitals.map((room) => (
-              <EmergencyRoomCard key={room.hospitalId} room={room} />
-            ))}
+            {rooms.hospitals.map((room, index) => {
+              const id = room.hospitalId.toString();
+              return (
+                <EmergencyRoomCard
+                  key={id}
+                  cardId={hospitalCardId(cardScope, id)}
+                  room={room}
+                  rank={index + 1}
+                  selected={id === activeId}
+                  onSelect={() => setSelectedId(id)}
+                />
+              );
+            })}
           </ol>
           <PublicDataNotice dataUpdatedAt={rooms.dataUpdatedAt} />
         </section>
