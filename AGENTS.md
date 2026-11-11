@@ -71,7 +71,7 @@
 | E02         | 응급 카드                       | `/emergency-card`                          | 구현                                         |
 | E03         | 보호자 연락처 등록              | `/guardian`                                | 구현                                         |
 | C01         | 보호자 저장 동의                | `/guardian-consent?from=guardian\|my-info` | 구현                                         |
-| P01         | 내 정보                         | `/my-info`                                 | 계정 영역만 구현 (본문 #32)                  |
+| P01         | 내 정보                         | `/my-info`                                 | 구현                                         |
 | L01 / L01a  | 로그인 / 실패                   | `/login`, `/login/failed`                  | 구현                                         |
 | —           | 카카오 콜백                     | `/auth/kakao/callback`                     | 구현                                         |
 | C02         | 기록 저장 동의                  | `/record-consent`                          | 구현                                         |
