@@ -27,3 +27,22 @@ export function answerChoices(question: IntakeQuestion): IntakeOption[] {
       return [];
   }
 }
+
+// 서버가 "없으면 없어요라고 해 주세요"라고 안내하는 기본 정보 질문(복용약·앓는 병·알레르기)입니다.
+// 서버 BasicInfoQuestions의 questionId이며, 다른 질문은 "없어요"가 없음 답으로 정해져 있지 않습니다.
+const noneAnswerQuestionIds: readonly string[] = [
+  "q_medications",
+  "q_conditions",
+  "q_allergies",
+];
+
+// 이 질문에 "없어요" 버튼을 보여 줄지 알려 줍니다. FREE_TEXT는 버튼 답(BUTTON)을 받지 않으므로 글로 보냅니다.
+export function canAnswerNone(question: IntakeQuestion): boolean {
+  return (
+    question.answerType === "FREE_TEXT" &&
+    noneAnswerQuestionIds.includes(question.questionId)
+  );
+}
+
+// 사용자가 명시적으로 답한 없음입니다. 서버가 이 글을 []로 정리하고, 답하지 않은 항목(null)과 구분합니다.
+export const NONE_ANSWER = "없어요";

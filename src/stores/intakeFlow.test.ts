@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { yesNoUnknownAnswers } from "@/api/enums";
-import { answerChoices, type IntakeQuestion } from "@/stores/intakeFlow";
+import {
+  answerChoices,
+  canAnswerNone,
+  type IntakeQuestion,
+} from "@/stores/intakeFlow";
 
 const base: IntakeQuestion = {
   questionId: "q_test",
@@ -39,5 +43,33 @@ describe("answerChoices", () => {
     expect(
       answerChoices({ ...base, answerType: "FREE_TEXT", options: null }),
     ).toEqual([]);
+  });
+});
+
+describe("canAnswerNone", () => {
+  const freeText: IntakeQuestion = {
+    questionId: "q_medications",
+    text: "복용약 질문",
+    answerType: "FREE_TEXT",
+    options: null,
+  };
+
+  it("복용약·앓는 병·알레르기 FREE_TEXT 질문에만 허용한다", () => {
+    for (const questionId of ["q_medications", "q_conditions", "q_allergies"]) {
+      expect(canAnswerNone({ ...freeText, questionId })).toBe(true);
+    }
+  });
+
+  it("다른 FREE_TEXT 질문과 선택형 질문에는 허용하지 않는다", () => {
+    expect(canAnswerNone({ ...freeText, questionId: "q_other" })).toBe(false);
+    expect(canAnswerNone(base)).toBe(false);
+    expect(
+      canAnswerNone({
+        ...base,
+        questionId: "q_gender",
+        answerType: "YES_NO_UNKNOWN",
+        options: null,
+      }),
+    ).toBe(false);
   });
 });
