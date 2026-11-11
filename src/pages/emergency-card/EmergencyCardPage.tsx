@@ -27,7 +27,9 @@ export function EmergencyCardPage() {
   const { emergency, currentLocation, loggedIn, guardian } = useAppStore();
   const navigate = useNavigate();
   const fromMyInfo = isFromMyInfo(useLocation().state);
-  const intakeId = emergency?.intakeId ?? null;
+  // 미리 보기는 내 보호자가 카드에 어떻게 보이는지 보는 용도라, 같은 세션에 응급 문진이 있어도 그 카드를 불러오지 않습니다.
+  // 불러오면 다른 문진의 증상·위치가 보이고, 문진이 사라졌으면 시작 화면으로 튕겨 나갑니다.
+  const intakeId = fromMyInfo ? null : (emergency?.intakeId ?? null);
   // 받은 결과를 어느 문진의 것인지와 함께 둬서, 문진이 바뀌면 이전 카드를 보여 주지 않습니다.
   const [loaded, setLoaded] = useState<{
     intakeId: string;
